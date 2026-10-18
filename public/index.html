@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OneDrive → Google Transfer</title>
+<style>
+ :root{--ink:#172033;--muted:#68758a;--line:#e3e9f2;--blue:#3867f4;--blue-dark:#2547c7;--bg:#f5f7fb;--card:#fff;--green:#16845d;--red:#d0445b}
+ *{box-sizing:border-box}html,body{margin:0;min-width:0}body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);padding:0 16px 48px}
+ .page{width:100%;max-width:1060px;margin:0 auto}.topbar{margin:0 -16px 28px;padding:20px max(20px,calc((100% - 1028px)/2));background:linear-gradient(120deg,#172442,#315bd0);color:white}.brand{display:flex;align-items:center;gap:10px;font-weight:800}.brand-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:white;color:var(--blue);font-weight:900}.topbar h1{font-size:clamp(24px,4vw,36px);line-height:1.1;margin:30px 0 7px;letter-spacing:-.8px}.topbar p{margin:0;color:#dbe4ff;font-size:14px}.section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 8px 25px #24375e0b}.section h2{font-size:17px;margin:0 0 15px}.section-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.section-head h2{margin:0}.step{display:inline-grid;place-items:center;width:27px;height:27px;border-radius:9px;background:#edf2ff;color:var(--blue);font-size:12px;font-weight:800;margin-right:8px}
+ .connections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.connection{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}.connection .service{min-width:0;flex:1}.connection b{display:block;font-size:13px}.connection p{margin:2px 0 0;font-size:12px;color:var(--muted)}.connection button{white-space:nowrap}.service-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;color:#fff;font-weight:800;background:linear-gradient(135deg,#20a7e0,#4e59d8)}.service-icon.google{background:linear-gradient(135deg,#f2b638,#e35d63)}
+ button,select,input{font:inherit}button{cursor:pointer;border:0;border-radius:9px;padding:8px 12px;background:#eef2ff;color:var(--blue);font-weight:700}button:hover{background:#dfe7ff}select,input{padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);max-width:100%}.primary{background:var(--blue);color:#fff}.primary:hover{background:var(--blue-dark)}
+ .ok{color:var(--green);font-weight:700}.no{color:var(--red);font-weight:700}ul{list-style:none;padding:0;margin:0;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#fbfcfe}li{padding:10px 12px;border-bottom:1px solid var(--line);min-width:0;overflow-wrap:anywhere}li:last-child{border-bottom:0}li a{cursor:pointer;color:var(--blue);font-weight:600}.browser-path{color:var(--muted);font-size:13px;margin:0 0 9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.selection{margin:12px 0 0;color:var(--muted);font-size:13px}.selection b{color:var(--ink);overflow-wrap:anywhere}progress{width:100%;height:10px;accent-color:var(--blue)}.small{color:var(--muted);font-size:.85rem}pre{background:#fff3f4;color:var(--red);padding:10px;border-radius:9px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+ .destination{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.destination select{flex:1 1 420px}.destination input{flex:1 1 180px}.job{border:1px solid var(--line);border-radius:14px;padding:17px;margin-top:12px;background:#fcfdff;min-width:0}.job:first-child{margin-top:0}.job-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:12px}.job-title{font-size:16px;font-weight:800;overflow-wrap:anywhere}.job-meta{color:var(--muted);font-size:12px;margin-top:3px}.job-status{padding:6px 10px;border-radius:999px;background:#e9f8f1;color:var(--green);font-size:11px;font-weight:800;white-space:nowrap}.job-status.paused{background:#fff5df;color:#a56a13}.job-status.error{background:#fff0f2;color:var(--red)}.job progress{display:block;margin:10px 0 12px}.job-stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}.job-stat{margin:0;padding:9px;border-radius:9px;background:#f4f7fb;color:var(--muted);font-size:11px;overflow-wrap:anywhere}.job-stat b{display:block;color:var(--ink);font-size:14px;margin-bottom:2px}.job-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}.job-actions button{flex:0 1 auto}.job-note{margin-top:10px;color:var(--muted);font-size:12px}.job-note.warn{color:#a56a13}.job h3{font-size:15px;margin:0 0 10px;overflow-wrap:anywhere}
+ .current-file{margin:10px 0;padding:10px;border-radius:9px;background:#eef3ff;color:#40537e;font-size:13px;overflow-wrap:anywhere}.current-file b{color:var(--ink)}details.skipped{margin-top:10px;border:1px solid #f0dfe2;border-radius:9px;background:#fff8f8;padding:9px 11px;color:var(--red)}details.skipped summary{cursor:pointer;font-weight:700;user-select:none}details.skipped ul{margin:8px 0 0;padding:8px 12px;border:0;background:#fff;list-style:disc;max-height:260px;overflow-y:auto;overflow-x:hidden;border-radius:7px}details.skipped li{padding:4px 0;border:0;font-size:12px;overflow-wrap:anywhere}
+ @media(max-width:620px){body{padding:0 10px 32px}.topbar{margin-left:-10px;margin-right:-10px;padding:18px}.section{padding:15px;border-radius:13px}.connections{grid-template-columns:1fr}.connection{align-items:flex-start}.connection button{margin-left:auto}.destination{display:grid;grid-template-columns:1fr}.destination select,.destination input,.destination button{width:100%}.topbar h1{margin-top:24px;font-size:28px}.job-top{flex-direction:column}.job-status{align-self:flex-start}.job-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style></head><body><div class="page">
+<header class="topbar"><div class="brand"><span class="brand-mark">↗</span><span>CloudLift</span></div><h1>OneDrive to Google, made simple.</h1><p>Connect your accounts, choose a folder, and monitor every transfer.</p></header>
+<h1>OneDrive → Google Drive / Photos / Cloud Storage</h1>
+
+<section class="section"><h2><span class="step">1</span>Connect accounts</h2>
+ <div class="connections"><div class="connection"><span class="service-icon">⊞</span><div class="service"><b>Microsoft OneDrive</b><p id="msS">Checking…</p></div><a href="/auth/microsoft"><button>Connect</button></a></div>
+ <div class="connection"><span class="service-icon google">G</span><div class="service"><b>Google services</b><p id="gS">Checking…</p></div><a href="/auth/google"><button>Connect</button></a></div></div>
+</section>
+
+<section class="section"><h2><span class="step">2</span>Choose OneDrive folder</h2>
+ <p class="browser-path" id="crumb"></p>
+ <ul id="list"></ul>
+ <p class="selection">Selected folder: <b id="sel">none</b></p>
+</section>
+
+<section class="section"><h2><span class="step">3</span>Choose destination</h2>
+ <div class="destination"><select id="dest">
+  <option value="auto">Auto: photos/videos → Google Photos album, other files → Drive</option>
+  <option value="drive">Google Drive (everything)</option>
+  <option value="photos">Google Photos only (images/videos)</option>
+  <option value="gcs">Google Cloud Storage bucket</option>
+ </select>
+ <input id="bucket" placeholder="bucket name" style="display:none">
+ <button class="primary" id="go">Start transfer</button></div>
+ <p class="small">Subfolders become Drive folders, Photos albums (named "Folder - Sub") or bucket paths.</p>
+</section>
+
+<section class="section"><div class="section-head"><h2><span class="step">↗</span>Transfer activity</h2><span class="small">Updates automatically</span></div><div id="jobs"></div></section></div>
+
+<script>
+const $=id=>document.getElementById(id);
+let stack=[{id:'root',name:'OneDrive'}], selected=null;
+const fmt=b=>b>1e9?(b/1e9).toFixed(2)+' GB':(b/1e6).toFixed(1)+' MB';
+const fmtRate=b=>{if(!b)return 'calculating…';const units=['B/s','KB/s','MB/s','GB/s'];let i=0,n=b;while(n>=1024&&i<units.length-1){n/=1024;i++}return (n>=100?n.toFixed(0):n.toFixed(1))+' '+units[i]};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const duration=s=>{if(s===null||s===undefined)return 'calculating…';if(s<=0)return 'complete';const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d?`${d}d ${h}h remaining`:h?`${h}h ${m}m remaining`:`${Math.max(1,m)}m remaining`};
+async function api(p,o){const r=await fetch(p,o);const j=await r.json();if(!r.ok)throw new Error(j.error||r.status);return j}
+async function status(){const s=await api('/api/status');
+ $('msS').innerHTML=s.microsoft?'<span class=ok>connected</span>':'<span class=no>not connected</span>';
+ $('gS').innerHTML=s.google?'<span class=ok>connected</span>':'<span class=no>not connected</span>';}
+async function browse(){
+ const cur=stack[stack.length-1];
+ $('crumb').textContent=stack.map(s=>s.name).join(' / ');
+ try{const items=await api('/api/ms/children?id='+encodeURIComponent(cur.id));
+  const ul=$('list');ul.innerHTML='';
+  if(stack.length>1){const li=document.createElement('li');li.innerHTML='<a>⬆ back</a>';li.onclick=()=>{stack.pop();browse()};ul.append(li)}
+  if(cur.id!=='root'){const li=document.createElement('li');li.innerHTML='<button>Select this folder</button>';
+   li.querySelector('button').onclick=()=>{selected=cur;$('sel').textContent=stack.map(s=>s.name).join('/')};ul.append(li)}
+  items.filter(i=>i.isFolder).forEach(i=>{const li=document.createElement('li');li.innerHTML='<a>📁 '+i.name+'</a>';
+   li.onclick=()=>{stack.push({id:i.id,name:i.name});browse()};ul.append(li)});
+  const nf=items.filter(i=>!i.isFolder).length;if(nf){const li=document.createElement('li');li.className='small';li.textContent=nf+' file(s) in this folder';ul.append(li)}
+ }catch(e){$('list').innerHTML='<li class=no>'+e.message+' (connect Microsoft first)</li>'}
+}
+$('dest').onchange=()=>$('bucket').style.display=$('dest').value==='gcs'?'':'none';
+$('go').onclick=async()=>{
+ if(!selected)return alert('Select a OneDrive folder first');
+ try{await api('/api/jobs',{method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({folderId:selected.id,folderName:selected.name,dest:$('dest').value,bucket:$('bucket').value})});refresh()}
+ catch(e){alert(e.message)}};
+async function act(id,a){await api(`/api/jobs/${id}/${a}`,{method:'POST'});refresh()}
+async function refresh(){
+ const jobs=await api('/api/jobs');
+ $('jobs').innerHTML=jobs.map(j=>{
+  const b=j.by,n=k=>(b[k]?.n||0),total=Object.values(b).reduce((a,x)=>a+x.n,0),
+   totBytes=Object.values(b).reduce((a,x)=>a+x.bytes,0),done=(b.done?.bytes||0);
+  const fin=n('done')+n('skipped')+n('failed'),completedBytes=done+(b.skipped?.bytes||0),pct=totBytes?Math.round(completedBytes/totBytes*100):0;
+  const statusClass=j.status==='paused'?'paused':j.status==='error'?'error':'';
+  return `<article class="job"><div class="job-top"><div><div class="job-title">${esc(j.folder_name)} <span class=small>→</span> ${esc(j.dest)}</div><div class=job-meta>Job #${j.id} · Started ${esc(j.created_at||'')}</div></div><span class="job-status ${statusClass}">${esc(j.status)}</span></div>
+   <progress value="${completedBytes}" max="${totBytes||1}"></progress>
+   <div class=job-stats><div class=job-stat><b>${pct}%</b>data complete</div><div class=job-stat><b>${duration(j.etaSeconds)}</b>estimated</div><div class=job-stat><b>${fmtRate(j.bytesPerSecond)}</b>speed</div><div class=job-stat><b>${n('done')}</b>done</div><div class=job-stat><b>${n('pending')}</b>pending</div><div class=job-stat><b>${fmt(done)}</b>of ${fmt(totBytes)}</div></div>
+   ${j.current?'<div class=current-file>Currently transferring: <b>'+esc(j.current.dir+'/'+j.current.name)+'</b></div>':'<div class="job-note">Waiting for the next file…</div>'}
+   ${n('failed')?'<div class="job-note warn">'+n('failed')+' file(s) need attention.</div>':''}
+   ${n('skipped')?'<div class=job-note>'+n('skipped')+' file(s) skipped because Google Photos does not support their type.</div>':''}
+   ${j.skippedFiles?.length?'<details class=skipped><summary>Show skipped file names ('+n('skipped')+')</summary><ul>'+j.skippedFiles.map(f=>'<li>'+esc(f.dir+'/'+f.name)+'</li>').join('')+'</ul></details>':''}
+   ${j.error?'<pre>'+esc(j.error)+'</pre>':''}
+   ${j.failed.length?'<pre>'+j.failed.map(f=>esc(f.dir+'/'+f.name+': '+f.error)).join('\n')+'</pre>':''}
+   <div class=job-actions><button onclick="act(${j.id},'pause')">Pause</button><button onclick="act(${j.id},'resume')">Resume</button><button onclick="act(${j.id},'retry')">Retry failed</button></div></article>`}).join('')||'<p class=small>No jobs yet.</p>';
+}
+status();browse();refresh();setInterval(refresh,2000);setInterval(status,10000);
+</script></body></html>
