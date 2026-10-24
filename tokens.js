@@ -18,10 +18,18 @@ function save(provider, obj) {
 function load(provider) {
   const r = db.prepare('select data from tokens where provider = ?').get(provider);
   if (!r) return null;
-  const b = Buffer.from(r.data, 'base64');
-  const d = crypto.createDecipheriv('aes-256-gcm', key(), b.subarray(0, 12));
-  d.setAuthTag(b.subarray(12, 28));
-  return JSON.parse(Buffer.concat([d.update(b.subarray(28)), d.final()]).toString('utf8'));
+  const k = key();
+  try {
+    const b = Buffer.from(r.data, 'base64');
+    const d = crypto.createDecipheriv('aes-256-gcm', k, b.subarray(0, 12));
+    d.setAuthTag(b.subarray(12, 28));
+    return JSON.parse(Buffer.concat([d.update(b.subarray(28)), d.final()]).toString('utf8'));
+  } catch (e) {
+    // Saved with a different TOKEN_KEY (or corrupted): treat as signed out so the user can reconnect.
+    console.warn(`[tokens] Discarding unreadable ${provider} token (${e.message}). Reconnect ${provider}.`);
+    db.prepare('delete from tokens where provider = ?').run(provider);
+    return null;
+  }
 }
 
 module.exports = { save, load };
