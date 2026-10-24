@@ -103,6 +103,13 @@ Everyday commands (run in the `cloudlift` folder):
 
 **Google Takeout on a server**: upload the *extracted* export into the `takeout` folder next to `docker-compose.yml` (for example with `rsync` or `scp`), then in CloudLift use the path `/takeout/Takeout`.
 
+### Install it on your phone
+CloudLift is an installable web app, so a server copy can be added to a phone's home screen. The server does the transfers, and the phone is a remote control. It keeps working when the phone is locked or offline.
+- **Android (Chrome):** open `https://cloudlift.example.com`, sign in, then tap **Install app** in the top bar, or use the ⋮ menu → **Add to home screen / Install app**.
+- **iPhone (Safari):** tap **Share** → **Add to Home Screen**.
+
+Installing needs HTTPS, which the Caddy setup above provides. A copy on your own computer can also be installed there from Chrome or Edge, but a phone can't reach a copy that only runs at `localhost`.
+
 ### Security notes
 - CloudLift **refuses to start on a public address without `APP_PASSWORD`**, because anyone reaching it could use your connected accounts. Use a long, unique password; after 5 wrong attempts an address must wait 15 minutes.
 - Keep `.env` private: it holds your app secrets, `TOKEN_KEY` and the password.
