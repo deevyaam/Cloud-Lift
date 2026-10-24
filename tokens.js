@@ -27,9 +27,13 @@ function load(provider) {
   } catch (e) {
     // Saved with a different TOKEN_KEY (or corrupted): treat as signed out so the user can reconnect.
     console.warn(`[tokens] Discarding unreadable ${provider} token (${e.message}). Reconnect ${provider}.`);
-    db.prepare('delete from tokens where provider = ?').run(provider);
+    remove(provider);
     return null;
   }
 }
 
-module.exports = { save, load };
+function remove(provider) {
+  db.prepare('delete from tokens where provider = ?').run(provider);
+}
+
+module.exports = { save, load, remove };

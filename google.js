@@ -11,6 +11,14 @@ const SCOPES = [
 ].join(' ');
 const redirect = () => `${process.env.BASE_URL || 'http://localhost:3000'}/auth/google/callback`;
 let refreshing = null;
+let authError = null; // set when the saved sign-in stops working
+let acct = null;
+
+function authFailure(message) {
+  const e = new Error(message);
+  e.auth = true;
+  return e;
+}
 
 function authUrl(state) {
   if (!process.env.GOOGLE_CLIENT_ID) {
@@ -18,7 +26,7 @@ function authUrl(state) {
   }
   return 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID, redirect_uri: redirect(), response_type: 'code',
-    scope: SCOPES, access_type: 'offline', prompt: 'consent', state,
+    scope: SCOPES, access_type: 'offline', prompt: 'consent select_account', state,
   });
 }
 
@@ -29,9 +37,18 @@ async function tokenReq(params) {
     body: new URLSearchParams({
       client_id: process.env.GOOGLE_CLIENT_ID, client_secret: process.env.GOOGLE_CLIENT_SECRET, ...params,
     }),
-  });
+    tokenRequest: true,
+  }, 2);
   const j = await r.json();
-  if (!r.ok) throw new Error(j.error_description || 'Google token error');
+  if (!r.ok) {
+    const message = j.error_description || 'Google token error';
+    if (r.status === 400 || r.status === 401) {
+      authError = 'Google sign-in expired. Reconnect Google.';
+      throw authFailure(message);
+    }
+    throw new Error(message);
+  }
+  authError = null;
   const prev = tokens.load(P) || {};
   tokens.save(P, {
     access_token: j.access_token,
@@ -40,22 +57,71 @@ async function tokenReq(params) {
   });
 }
 
-const exchange = (code) => tokenReq({ grant_type: 'authorization_code', code, redirect_uri: redirect() });
+async function exchange(code) {
+  await tokenReq({ grant_type: 'authorization_code', code, redirect_uri: redirect() });
+  acct = null;
+  // Drive folder and album ids belong to one Google account; forget them if the account changed.
+  const email = (await account())?.email;
+  const saved = db.prepare("select value from maps where kind='meta' and key='google-account'").get()?.value;
+  if (email && saved && saved !== email) {
+    db.prepare("delete from maps where kind in ('drive', 'album')").run();
+    memo.clear();
+  }
+  if (email) db.prepare("insert or replace into maps(kind, key, value) values('meta', 'google-account', ?)").run(email);
+}
 
-async function token() {
-  const t = tokens.load(P);
-  if (!t) throw new Error('Google not connected');
-  if (Date.now() < t.expires_at) return t.access_token;
+function refresh(t) {
   if (!refreshing) {
     refreshing = tokenReq({ grant_type: 'refresh_token', refresh_token: t.refresh_token })
       .finally(() => { refreshing = null; });
   }
-  await refreshing;
+  return refreshing;
+}
+
+async function token() {
+  const t = tokens.load(P);
+  if (!t) throw authFailure('Google not connected');
+  if (Date.now() < t.expires_at) return t.access_token;
+  await refresh(t);
   return tokens.load(P).access_token;
 }
 
+// Called on a timer so the sign-in is renewed before it expires, even when idle.
+async function keepAlive() {
+  const t = tokens.load(P);
+  if (!t || Date.now() < t.expires_at - 10 * 60 * 1000) return;
+  try { await refresh(t); } catch (e) { console.warn(`[google] token refresh failed: ${e.message}`); }
+}
+
 const connected = () => !!tokens.load(P);
+const problem = () => (connected() ? authError : null);
 const auth = async () => ({ Authorization: 'Bearer ' + (await token()) });
+
+async function account() {
+  if (!acct && connected()) {
+    // drive.file is enough for about.get, so no extra scope is needed.
+    const r = await http('https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress)', { headers: await auth() });
+    if (!r.ok) throw new Error(`Google account ${r.status}: ${await r.text()}`);
+    const { user } = await r.json();
+    acct = { name: user.displayName, email: user.emailAddress };
+  }
+  return acct;
+}
+
+async function disconnect() {
+  const t = tokens.load(P);
+  tokens.remove(P);
+  acct = null;
+  authError = null;
+  if (t) {
+    await http('https://oauth2.googleapis.com/revoke', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ token: t.refresh_token || t.access_token }),
+      tokenRequest: true,
+    }, 1).catch((e) => console.warn(`[google] revoke failed: ${e.message}`));
+  }
+}
 
 // Generic resumable upload: used by Drive and Cloud Storage. src.range(start,end) supplies bytes.
 async function resumable(initUrl, initHeaders, initBody, size, src) {
@@ -194,4 +260,4 @@ async function photosUpload({ name, size, mime, albumId }, bodyStream) {
   });
 }
 
-module.exports = { authUrl, exchange, connected, driveFolder, driveUpload, gcsUpload, photosAlbum, photosUpload, CHUNK };
+module.exports = { authUrl, exchange, connected, problem, account, disconnect, keepAlive, driveFolder, driveUpload, gcsUpload, photosAlbum, photosUpload, CHUNK };

@@ -33,4 +33,12 @@ create table if not exists files(
   error text, dest_kind text, dest_id text, unique(job_id, item_id));
 create table if not exists maps(kind text, key text, value text, primary key(kind, key));
 `);
+const jobColumns = db.prepare('pragma table_info(jobs)').all().map((column) => column.name);
+if (!jobColumns.includes('merge')) db.exec('alter table jobs add column merge integer default 0');
+if (!jobColumns.includes('skip_existing')) db.exec('alter table jobs add column skip_existing integer default 0');
+if (!jobColumns.includes('fallback')) db.exec('alter table jobs add column fallback integer default 0');
+db.exec(`
+create index if not exists files_job_status on files(job_id, status);
+create index if not exists files_item on files(item_id);
+`);
 module.exports = db;

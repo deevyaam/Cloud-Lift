@@ -5,6 +5,14 @@ const P = 'microsoft';
 const tenant = () => process.env.MS_TENANT || 'common';
 const redirect = () => `${process.env.BASE_URL || 'http://localhost:3000'}/auth/microsoft/callback`;
 let refreshing = null;
+let authError = null; // set when the saved sign-in stops working
+let acct = null;
+
+function authFailure(message) {
+  const e = new Error(message);
+  e.auth = true;
+  return e;
+}
 
 function authUrl(state) {
   if (!process.env.MS_CLIENT_ID) {
@@ -12,7 +20,7 @@ function authUrl(state) {
   }
   return `https://login.microsoftonline.com/${tenant()}/oauth2/v2.0/authorize?` + new URLSearchParams({
     client_id: process.env.MS_CLIENT_ID, response_type: 'code', redirect_uri: redirect(),
-    response_mode: 'query', scope: 'offline_access Files.Read User.Read', state,
+    response_mode: 'query', scope: 'offline_access Files.Read User.Read', prompt: 'select_account', state,
   });
 }
 
@@ -24,9 +32,18 @@ async function tokenReq(params) {
       client_id: process.env.MS_CLIENT_ID, client_secret: process.env.MS_CLIENT_SECRET,
       redirect_uri: redirect(), ...params,
     }),
-  });
+    tokenRequest: true,
+  }, 2);
   const j = await r.json();
-  if (!r.ok) throw new Error(j.error_description || 'Microsoft token error');
+  if (!r.ok) {
+    const message = j.error_description || 'Microsoft token error';
+    if (r.status === 400 || r.status === 401) {
+      authError = 'Microsoft sign-in expired. Reconnect Microsoft.';
+      throw authFailure(message);
+    }
+    throw new Error(message);
+  }
+  authError = null;
   const prev = tokens.load(P) || {};
   tokens.save(P, {
     access_token: j.access_token,
@@ -35,21 +52,50 @@ async function tokenReq(params) {
   });
 }
 
-const exchange = (code) => tokenReq({ grant_type: 'authorization_code', code });
+async function exchange(code) {
+  await tokenReq({ grant_type: 'authorization_code', code });
+  acct = null;
+}
 
-async function token() {
-  const t = tokens.load(P);
-  if (!t) throw new Error('Microsoft not connected');
-  if (Date.now() < t.expires_at) return t.access_token;
+function refresh(t) {
   if (!refreshing) {
     refreshing = tokenReq({ grant_type: 'refresh_token', refresh_token: t.refresh_token })
       .finally(() => { refreshing = null; });
   }
-  await refreshing;
+  return refreshing;
+}
+
+async function token() {
+  const t = tokens.load(P);
+  if (!t) throw authFailure('Microsoft not connected');
+  if (Date.now() < t.expires_at) return t.access_token;
+  await refresh(t);
   return tokens.load(P).access_token;
 }
 
+// Called on a timer so the sign-in is renewed before it expires, even when idle.
+async function keepAlive() {
+  const t = tokens.load(P);
+  if (!t || Date.now() < t.expires_at - 10 * 60 * 1000) return;
+  try { await refresh(t); } catch (e) { console.warn(`[microsoft] token refresh failed: ${e.message}`); }
+}
+
 const connected = () => !!tokens.load(P);
+const problem = () => (connected() ? authError : null);
+
+async function account() {
+  if (!acct && connected()) {
+    const me = await graph('/me?$select=displayName,mail,userPrincipalName');
+    acct = { name: me.displayName, email: me.mail || me.userPrincipalName };
+  }
+  return acct;
+}
+
+function disconnect() {
+  tokens.remove(P);
+  acct = null;
+  authError = null;
+}
 
 async function graph(u) {
   const url = u.startsWith('http') ? u : 'https://graph.microsoft.com/v1.0' + u;
@@ -73,6 +119,10 @@ async function children(id) {
 async function downloadUrl(id) {
   const j = await graph(`/me/drive/items/${id}?$select=id,@microsoft.graph.downloadUrl`);
   return j['@microsoft.graph.downloadUrl'] || null;
+}
+
+async function item(id) {
+  return graph(`/me/drive/items/${encodeURIComponent(id)}?$select=id,name,webUrl`);
 }
 
 // Reads a OneDrive file in byte ranges. Graph normally returns a short-lived
@@ -105,4 +155,4 @@ function reader(id) {
   };
 }
 
-module.exports = { authUrl, exchange, connected, children, reader };
+module.exports = { authUrl, exchange, connected, problem, account, disconnect, keepAlive, children, item, downloadUrl, reader };
