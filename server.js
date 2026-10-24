@@ -19,7 +19,12 @@ const meter = require('./meter');
 const execFileAsync = promisify(execFile);
 const { describeError } = require('./http');
 
+const access = require('./access');
+
 const app = express();
+// Behind a reverse proxy (Caddy in docker-compose), trust it for HTTPS and client addresses.
+if (process.env.TRUST_PROXY) app.set('trust proxy', 1);
+access.install(app);
 app.use(express.json());
 app.use(express.static('public'));
 const states = new Set();
@@ -115,6 +120,7 @@ app.get('/api/status', wrap(async (req, res) => {
     google: googleAccount.connected,
     microsoftAccount,
     googleAccount,
+    passwordProtected: access.enabled(),
     microsoftConfigured: !!process.env.MS_CLIENT_ID && !!process.env.MS_CLIENT_SECRET,
     googleConfigured: !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET,
   });
@@ -289,8 +295,17 @@ app.get('/api/jobs/:id/skipped.zip', async (req, res) => {
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, '127.0.0.1', () => {
-  console.log(`Open http://localhost:${port}`);
+const host = process.env.HOST || '127.0.0.1';
+const loopback = ['127.0.0.1', 'localhost', '::1'].includes(host);
+// Anyone reaching an open copy could use the connected accounts, so refuse to listen publicly without a password.
+if (!loopback && !access.enabled() && !process.env.ALLOW_NO_PASSWORD) {
+  console.error(`Refusing to listen on ${host} without APP_PASSWORD. Set APP_PASSWORD in .env (or ALLOW_NO_PASSWORD=1 if only you can reach this port).`);
+  process.exit(1);
+}
+// Temp copies of large files go here; in Docker it is on the data volume (TMPDIR).
+require('fs').mkdirSync(require('os').tmpdir(), { recursive: true });
+app.listen(port, host, () => {
+  console.log(`Open ${process.env.BASE_URL || `http://localhost:${port}`}${access.enabled() ? ' (password protected)' : ''}`);
   worker.resumeAll();
   const keepAlive = () => { ms.keepAlive(); g.keepAlive(); };
   keepAlive();

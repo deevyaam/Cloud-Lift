@@ -1,0 +1,40 @@
+# CloudLift on a server: the app plus Caddy, which gets a free HTTPS certificate for DOMAIN.
+# Settings come from .env next to this file (see DEPLOY.md).
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # These override .env so a copied Windows .env still works here.
+      HOST: 0.0.0.0
+      PORT: "3000"
+      TRUST_PROXY: "1"
+      BASE_URL: https://${DOMAIN:?Set DOMAIN in .env}
+      DB_PATH: /data/transfer.db
+      TMPDIR: /data/tmp
+      EXIFTOOL_PATH: exiftool
+    volumes:
+      - cloudlift-data:/data
+      # Put extracted Google Takeout exports in ./takeout; in the app use /takeout/... as the path.
+      - ./takeout:/takeout:ro
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+volumes:
+  cloudlift-data:
+  caddy-data:
+  caddy-config:
