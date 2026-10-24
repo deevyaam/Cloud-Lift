@@ -37,6 +37,11 @@ const jobColumns = db.prepare('pragma table_info(jobs)').all().map((column) => c
 if (!jobColumns.includes('merge')) db.exec('alter table jobs add column merge integer default 0');
 if (!jobColumns.includes('skip_existing')) db.exec('alter table jobs add column skip_existing integer default 0');
 if (!jobColumns.includes('fallback')) db.exec('alter table jobs add column fallback integer default 0');
+// Google -> OneDrive jobs: source is gphotos/gdrive/takeout, target_id is the OneDrive folder.
+if (!jobColumns.includes('direction')) db.exec("alter table jobs add column direction text default 'to_google'");
+if (!jobColumns.includes('source')) db.exec("alter table jobs add column source text default 'onedrive'");
+if (!jobColumns.includes('target_id')) db.exec('alter table jobs add column target_id text');
+if (!jobColumns.includes('target_name')) db.exec('alter table jobs add column target_name text');
 db.exec(`
 create index if not exists files_job_status on files(job_id, status);
 create index if not exists files_item on files(item_id);

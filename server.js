@@ -11,6 +11,8 @@ const { promisify } = require('node:util');
 const db = require('./db');
 const ms = require('./ms');
 const g = require('./google');
+const gs = require('./gsource');
+const takeout = require('./takeout');
 const worker = require('./worker');
 const settings = require('./settings');
 const meter = require('./meter');
@@ -65,11 +67,16 @@ function login(provider) {
     }
   });
   app.get(`/auth/${provider.name}/callback`, async (req, res) => {
-    if (!states.delete(req.query.state) && !validOAuthState(req.query.state)) return res.status(400).send('Invalid or expired OAuth state. Start the connection again from this server.');
-    if (req.query.error) return res.status(400).send(`OAuth was not completed: ${req.query.error_description || req.query.error}`);
-    if (!req.query.code) return res.status(400).send('OAuth callback did not include an authorization code');
+    const fail = (message) => {
+      console.warn(`[oauth:${provider.name}] ${message}`);
+      return res.status(400).send(htmlText(message));
+    };
+    if (!states.delete(req.query.state) && !validOAuthState(req.query.state)) return fail('Invalid or expired OAuth state. Start the connection again from this server.');
+    if (req.query.error) return fail(`OAuth was not completed: ${req.query.error_description || req.query.error}`);
+    if (!req.query.code) return fail('OAuth callback did not include an authorization code');
     try {
       await provider.mod.exchange(req.query.code);
+      console.log(`[oauth:${provider.name}] connected`);
       worker.resumeAuthPaused();
       res.redirect('/');
     } catch (e) {
@@ -96,7 +103,9 @@ async function accountStatus(mod) {
   if (connected && !mod.problem()) {
     try { account = await mod.account(); } catch (e) { console.warn(`[status] account lookup failed: ${describeError(e)}`); }
   }
-  return { connected, account, problem: mod.problem() };
+  // canWrite (Microsoft) / canRead (Google): granted only by sign-ins made since Google -> OneDrive was added.
+  const extra = mod === ms ? { canWrite: connected && ms.canWrite() } : { canRead: connected && g.canRead() };
+  return { connected, account, problem: mod.problem(), ...extra };
 }
 
 app.get('/api/status', wrap(async (req, res) => {
@@ -145,8 +154,47 @@ app.get('/api/ms/children', wrap(async (req, res) => {
   res.json(items.map((i) => ({ id: i.id, name: i.name, size: i.size, isFolder: !!i.folder })));
 }));
 
+// ---------- Google -> OneDrive sources ----------
+app.get('/api/gdrive/children', wrap(async (req, res) => {
+  const items = await gs.driveList(req.query.id || 'root');
+  res.json(items.map(({ id, name, size, isFolder }) => ({ id, name, size, isFolder })));
+}));
+
+app.post('/api/picker/sessions', wrap(async (req, res) => {
+  const s = await gs.pickerCreate();
+  // /autoclose closes Google's picker window once the user presses Done.
+  res.json({ id: s.id, pickerUri: s.pickerUri.replace(/\/?$/, '/autoclose') });
+}));
+
+app.get('/api/picker/sessions/:id', wrap(async (req, res) => {
+  const s = await gs.pickerGet(req.params.id);
+  if (!s.mediaItemsSet) return res.json({ ready: false });
+  const items = await gs.pickerItems(req.params.id);
+  res.json({ ready: true, count: items.length, videos: items.filter((i) => i.type === 'VIDEO').length });
+}));
+
+app.get('/api/takeout/check', async (req, res) => {
+  try {
+    res.json(await takeout.check(String(req.query.path || '')));
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
 app.post('/api/jobs', wrap(async (req, res) => {
   const { folderId, folderName, dest, bucket, merge, skipExisting, fallback } = req.body;
+  if (req.body.direction === 'to_onedrive') {
+    const { source, sourceId, sourceName, targetId, targetName } = req.body;
+    if (!['gphotos', 'gdrive', 'takeout'].includes(source)) return res.status(400).json({ error: 'bad source' });
+    if (!sourceId) return res.status(400).json({ error: 'Choose what to copy from Google first' });
+    if (!targetId) return res.status(400).json({ error: 'Select a OneDrive destination folder first' });
+    if (source === 'takeout') await takeout.check(sourceId);
+    const r = db.prepare(`insert into jobs(direction, source, folder_id, folder_name, dest, target_id, target_name, merge, skip_existing)
+      values('to_onedrive',?,?,?,'onedrive',?,?,?,?)`)
+      .run(source, sourceId, sourceName || 'Google', targetId, targetName || 'OneDrive', source === 'takeout' && merge === true ? 1 : 0, skipExisting === false ? 0 : 1);
+    worker.start(r.lastInsertRowid);
+    return res.json({ id: r.lastInsertRowid });
+  }
   if (!folderId) return res.status(400).json({ error: 'Select a OneDrive folder first' });
   if (!['auto', 'drive', 'photos', 'gcs'].includes(dest)) return res.status(400).json({ error: 'bad destination' });
   if (dest === 'gcs' && !bucket) return res.status(400).json({ error: 'bucket required' });
@@ -170,7 +218,9 @@ app.get('/api/jobs', wrap(async (req, res) => {
     const active = worker.isRunning(j.id);
     const avgBytesPerSecond = doneBytes && elapsedSeconds ? doneBytes / elapsedSeconds : 0;
     const bytesPerSecond = active ? meter.rate(j.id) : null; // last 30 seconds
-    const etaSeconds = !remainingBytes ? 0 : (bytesPerSecond ? Math.ceil(remainingBytes / bytesPerSecond) : null);
+    const remainingFiles = (by.pending?.n || 0) + (by.active?.n || 0);
+    // Photos picker items have no size until downloaded, so no byte-based estimate is possible.
+    const etaSeconds = !remainingFiles ? 0 : (bytesPerSecond && remainingBytes ? Math.ceil(remainingBytes / bytesPerSecond) : null);
     return { ...j, by, active, current, failed, skippedFiles, etaSeconds, bytesPerSecond, avgBytesPerSecond };
   });
   res.json(jobs);

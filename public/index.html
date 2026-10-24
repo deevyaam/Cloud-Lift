@@ -178,6 +178,14 @@ select:focus,input:focus{border-color:var(--primary);box-shadow:0 0 0 3px #696cf
 .settings-form label{display:grid;gap:5px;font-size:12px;font-weight:600;color:var(--ink)}
 .settings-form small{color:var(--muted);font-weight:400}
 .settings-actions{display:flex;align-items:center;gap:10px}
+.heading-side{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.direction-switch{display:flex;padding:3px;border-radius:9px;background:var(--surface);border:1px solid var(--line)}
+.direction-switch button{background:transparent;color:var(--muted);padding:7px 12px}
+.direction-switch button.active{background:var(--primary);color:#fff}
+.source-panel{display:grid;gap:8px}
+.source-panel .browser-path{margin:0}
+.folder-list.mini{grid-template-columns:repeat(2,minmax(0,1fr));max-height:200px;overflow-y:auto;gap:6px}
+.folder-list.mini li{padding:7px 10px}
 .help-dialog{
   max-width:560px;width:calc(100% - 32px);border:1px solid var(--line);border-radius:12px;
   background:var(--surface);color:var(--ink);padding:24px;box-shadow:var(--shadow);
@@ -333,6 +341,7 @@ details.skipped summary{cursor:pointer;font-size:12px;font-weight:700}
   .row-footer-cards{grid-template-columns:1fr;gap:12px}
   .folder-list{grid-template-columns:1fr}
   .page-heading{align-items:flex-start;flex-direction:column;margin-bottom:16px}
+  .heading-side{align-items:flex-start}
   .page-heading h1{font-size:20px}
   .connections{grid-template-columns:1fr}
   .card{padding:15px}
@@ -365,10 +374,16 @@ details.skipped summary{cursor:pointer;font-size:12px;font-weight:700}
     <div class="page-heading">
       <div>
         <p class="eyebrow">Cloud migration workspace</p>
-        <h1>OneDrive to Google</h1>
+        <h1 id="pageTitle">OneDrive to Google</h1>
         <p>Move your files securely and keep track of every transfer.</p>
       </div>
-      <span id="readyBadge" class="badge">Checking…</span>
+      <div class="heading-side">
+        <div class="direction-switch" role="group" aria-label="Transfer direction">
+          <button type="button" data-dir="to_google" class="active">OneDrive → Google</button>
+          <button type="button" data-dir="to_onedrive">Google → OneDrive</button>
+        </div>
+        <span id="readyBadge" class="badge">Checking…</span>
+      </div>
     </div>
 
     <!-- Row 1: Four equal stat cards -->
@@ -448,8 +463,8 @@ details.skipped summary{cursor:pointer;font-size:12px;font-weight:700}
           <div class="card-title">
             <span class="step" id="step2">2</span>
             <div>
-              <h2>Choose OneDrive folder</h2>
-              <p class="card-subtitle">Open a folder, then press <b>Select this folder</b>.</p>
+              <h2 id="folderTitle">Choose OneDrive folder</h2>
+              <p class="card-subtitle" id="folderSub">Open a folder, then press <b>Select this folder</b>.</p>
             </div>
           </div>
         </div>
@@ -471,22 +486,44 @@ details.skipped summary{cursor:pointer;font-size:12px;font-weight:700}
           <div class="card-title">
             <span class="step">3</span>
             <div>
-              <h2>Choose destination and start</h2>
-              <p class="card-subtitle">Subfolders become Drive folders, Photos albums, or bucket paths.</p>
+              <h2 id="step3Title">Choose destination and start</h2>
+              <p class="card-subtitle" id="step3Sub">Subfolders become Drive folders, Photos albums, or bucket paths.</p>
             </div>
           </div>
         </div>
         <div class="destination">
-          <select id="dest">
-            <option value="auto">Auto: Photos + Drive</option>
-            <option value="drive">Google Drive — everything</option>
-            <option value="photos">Google Photos — media only</option>
-            <option value="gcs">Cloud Storage bucket</option>
-          </select>
-          <input id="bucket" placeholder="Bucket name" style="display:none">
-          <label class="merge-option"><input id="skipExisting" type="checkbox" checked><span>Skip files already copied by earlier transfers<small>Unchanged files that went to the same kind of destination are not uploaded again.</small></span></label>
-          <label class="merge-option" id="fallbackRow" style="display:none"><input id="fallback" type="checkbox" checked><span>Send files Google Photos can't take to Google Drive<small>Otherwise they are listed under Skipped files.</small></span></label>
-          <label class="merge-option"><input id="mergeMetadata" type="checkbox" disabled><span>Merge Google Takeout dates and locations into photos<small id="exiftoolStatus">Checking ExifTool…</small></span></label>
+          <div id="fwdOptions" class="destination">
+            <select id="dest">
+              <option value="auto">Auto: Photos + Drive</option>
+              <option value="drive">Google Drive — everything</option>
+              <option value="photos">Google Photos — media only</option>
+              <option value="gcs">Cloud Storage bucket</option>
+            </select>
+            <input id="bucket" placeholder="Bucket name" style="display:none">
+            <label class="merge-option" id="fallbackRow" style="display:none"><input id="fallback" type="checkbox" checked><span>Send files Google Photos can't take to Google Drive<small>Otherwise they are listed under Skipped files.</small></span></label>
+          </div>
+          <div id="revOptions" class="destination" style="display:none">
+            <select id="source">
+              <option value="gphotos">Google Photos — pick photos and videos</option>
+              <option value="gdrive">Google Drive — a folder</option>
+              <option value="takeout">Google Takeout export on this computer</option>
+            </select>
+            <div id="srcPhotos" class="source-panel">
+              <button type="button" id="pickPhotos">Choose in Google Photos</button>
+              <p class="small" id="pickStatus">Opens Google Photos in a new window. Pick your photos and videos, then press <b>Done</b>.</p>
+            </div>
+            <div id="srcDrive" class="source-panel" style="display:none">
+              <p class="browser-path" id="gCrumb"></p>
+              <ul class="folder-list mini" id="gList"></ul>
+              <p class="selection"><span>Drive folder</span><b id="gSel">none</b></p>
+            </div>
+            <div id="srcTakeout" class="source-panel" style="display:none">
+              <div class="destination-row"><input id="takeoutPath" placeholder="C:\Users\you\Downloads\Takeout"><button type="button" id="takeoutCheck">Check folder</button></div>
+              <p class="small" id="takeoutStatus">Extract every Takeout .zip into one folder, then paste that folder's path here.</p>
+            </div>
+          </div>
+          <label class="merge-option"><input id="skipExisting" type="checkbox" checked><span>Skip files already copied by earlier transfers<small>Unchanged files that went to the same destination are not uploaded again.</small></span></label>
+          <label class="merge-option" id="mergeRow"><input id="mergeMetadata" type="checkbox" disabled><span>Merge Google Takeout dates and locations into photos<small id="exiftoolStatus">Checking ExifTool…</small></span></label>
           <button class="primary" id="go" disabled>Start transfer</button>
           <p class="small" id="goHint">Connect both accounts in step 1.</p>
         </div>
@@ -564,7 +601,7 @@ details.skipped summary{cursor:pointer;font-size:12px;font-weight:700}
             <span class="step">⚠</span>
             <div>
               <h2>Skipped files</h2>
-              <p class="card-subtitle">Files Google Photos could not take.</p>
+              <p class="card-subtitle">Files that could not be copied.</p>
             </div>
           </div>
           <span id="skippedBadge" class="badge">0 files</span>
@@ -611,6 +648,13 @@ details.skipped summary{cursor:pointer;font-size:12px;font-weight:700}
     <li><b>Choose a OneDrive folder.</b> Open folders by clicking them, then press <b>Select this folder</b>. Everything inside, including subfolders, is copied.</li>
     <li><b>Choose a destination and start.</b> <i>Auto</i> sends photos and videos to Google Photos and everything else to Google Drive.</li>
   </ol>
+  <h3>Google → OneDrive</h3>
+  <p>Switch the direction at the top of the page. In step 2 pick the OneDrive folder to copy into, then in step 3 choose a source:</p>
+  <ul>
+    <li><b>Google Photos:</b> Google only lets apps read the photos you pick, so press <b>Choose in Google Photos</b>, select items and press Done. Repeat for more.</li>
+    <li><b>Google Drive:</b> pick any Drive folder. Google Docs, Sheets and Slides are saved as Word, Excel and PowerPoint files.</li>
+    <li><b>Google Takeout:</b> best for a whole Photos library. Export from takeout.google.com, extract all the .zip files into one folder, and paste its path. Turn on metadata merge to keep dates and locations.</li>
+  </ul>
   <h3>Good to know</h3>
   <ul>
     <li>Your files stay in OneDrive. CloudLift only copies them.</li>
@@ -624,6 +668,11 @@ details.skipped summary{cursor:pointer;font-size:12px;font-weight:700}
 <script>
 const $=id=>document.getElementById(id);
 let stack=[{id:'root',name:'OneDrive'}], selected=null, folderItems=[], accounts={}, latestJob=null;
+// Direction: 'to_google' (OneDrive is the source) or 'to_onedrive' (OneDrive is the destination).
+let dir='to_google', gStack=[{id:'root',name:'My Drive'}], srcSel={gphotos:null,gdrive:null,takeout:null}, pickToken=0;
+const store={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
+const reverse=()=>dir==='to_onedrive';
+const route=j=>j.direction==='to_onedrive'?`${j.folder_name} → ${j.target_name||'OneDrive'}`:`${j.folder_name} → ${j.dest}`;
 const num=n=>Number(n||0).toLocaleString();
 const fmt=b=>b>1e9?(b/1e9).toFixed(2)+' GB':(b/1e6).toFixed(1)+' MB';
 const fmtRate=b=>{if(!b)return '0 B/s';const units=['B/s','KB/s','MB/s','GB/s'];let i=0,n=b;while(n>=1024&&i<units.length-1){n/=1024;i++}return (n>=100?n.toFixed(0):n.toFixed(1))+' '+units[i]};
@@ -633,7 +682,8 @@ const STATUS={scanning:'Scanning folders',running:'Transferring',paused:'Paused'
 const statusText=s=>STATUS[s]||s;
 const statusClass=s=>s==='paused'?'paused':(s==='error'||s==='done_with_errors')?'error':'';
 async function api(p,o){const r=await fetch(p,o);const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||r.status);return j}
-const post=(p,body)=>api(p,{method:body?'PUT':'POST',headers:{'Content-Type':'application/json'},body:body&&JSON.stringify(body)});
+const send=(method,p,body)=>api(p,{method,headers:{'Content-Type':'application/json'},body:body&&JSON.stringify(body)});
+const post=(p,body)=>send('POST',p,body);
 function setStep(id,done,label){$(id).classList.toggle('done',done);$(id).textContent=done?'✓':label}
 
 async function exiftoolStatus(){try{const s=await api('/api/exiftool');const box=$('mergeMetadata');box.disabled=!s.ok;$('exiftoolStatus').textContent=s.ok?`ExifTool ${s.version} ready`:'Install ExifTool and set EXIFTOOL_PATH';}catch(e){$('exiftoolStatus').textContent='Install ExifTool and set EXIFTOOL_PATH';}}
@@ -651,14 +701,25 @@ function renderAccount(prefix,provider,a,configured){
   return;
  }
  const who=a.account?(a.account.email||a.account.name):'';
+ if(reverse()&&!(provider==='microsoft'?a.canWrite:a.canRead)){
+  $(prefix+'S').innerHTML='<span class=no>Reconnect to allow Google → OneDrive</span>'+(who?' · '+esc(who):'');
+  $(prefix+'Actions').innerHTML=`<a class="btn primary" href="/auth/${provider}">Reconnect</a>`;
+  return;
+ }
  $(prefix+'S').innerHTML='<span class=ok>Connected</span>'+(who?' · <span title="'+esc(who)+'">'+esc(who)+'</span>':'');
  $(prefix+'Actions').innerHTML=`<a class="btn" href="/auth/${provider}" title="Sign in with a different ${label} account">Switch</a><button data-disconnect="${provider}">Disconnect</button>`;
+}
+// Accounts are connected and, for Google -> OneDrive, have the extra permissions it needs.
+function accountsReady(){
+ const s=accounts;
+ if(!(s.microsoft&&s.google&&!s.microsoftAccount?.problem&&!s.googleAccount?.problem))return false;
+ return !reverse()||(s.microsoftAccount.canWrite&&s.googleAccount.canRead);
 }
 async function status(){
  const s=await api('/api/status');accounts=s;
  renderAccount('ms','microsoft',s.microsoftAccount,s.microsoftConfigured);
  renderAccount('g','google',s.googleAccount,s.googleConfigured);
- const ready=s.microsoft&&s.google&&!s.microsoftAccount.problem&&!s.googleAccount.problem;
+ const ready=accountsReady();
  setStep('step1',ready,'1');
  $('readyBadge').className='badge '+(ready?'ok':'no');
  $('readyBadge').textContent=ready?'Accounts connected':'Connect accounts to start';
@@ -679,10 +740,11 @@ function renderFolders(){
   const li=document.createElement('li');li.className='folder-action-item';li.innerHTML='<a>⬆ Back to parent folder</a>';
   li.onclick=()=>{stack.pop();$('folderFilter').value='';browse()};ul.append(li);
  }
- if(cur.id!=='root'){
+ // The OneDrive top level can be a destination, but is too broad to copy from.
+ if(cur.id!=='root'||reverse()){
   const li=document.createElement('li');li.className='folder-action-item';
   const isSel=selected&&selected.id===cur.id;
-  li.innerHTML=`<button class="${isSel?'':'primary'}" style="width:100%">${isSel?'✓ Selected':'Select this folder'}</button>`;
+  li.innerHTML=`<button class="${isSel?'':'primary'}" style="width:100%">${isSel?'✓ Selected':reverse()?'Copy into this folder':'Select this folder'}</button>`;
   li.querySelector('button').onclick=()=>{selected={id:cur.id,name:cur.name,path:stack.map(s=>s.name).join('/')};$('sel').textContent=selected.path;setStep('step2',true,'2');updateStart();renderFolders()};
   ul.append(li);
  }
@@ -704,16 +766,124 @@ async function browse(){
 }
 $('folderFilter').oninput=renderFolders;
 
+// The chosen Google source as { id, name }, or null.
+function sourceChoice(){
+ const s=$('source').value;
+ if(s==='gphotos')return srcSel.gphotos?.count?srcSel.gphotos:null;
+ return srcSel[s];
+}
 function updateStart(){
- const connected=accounts.microsoft&&accounts.google, gcsOk=$('dest').value!=='gcs'||$('bucket').value.trim();
+ const connected=accounts.microsoft&&accounts.google;
+ if(reverse()){
+  const src=sourceChoice();
+  const srcHint={gphotos:'Choose photos and videos in Google Photos.',gdrive:'Pick a Google Drive folder.',takeout:'Enter your Takeout folder and press Check folder.'}[$('source').value];
+  $('go').disabled=!(accountsReady()&&selected&&src);
+  $('goHint').textContent=!connected?'Connect both accounts in step 1.':!accountsReady()?'Reconnect Microsoft and Google in step 1 to allow copying to OneDrive.':!selected?'Choose the OneDrive folder to copy into in step 2.':!src?srcHint:`Ready to copy ${src.name} into "${selected.path}".`;
+  return;
+ }
+ const gcsOk=$('dest').value!=='gcs'||$('bucket').value.trim();
  $('go').disabled=!(connected&&selected&&gcsOk);
  $('goHint').textContent=!connected?'Connect both accounts in step 1.':!selected?'Choose a folder in step 2.':!gcsOk?'Enter the Cloud Storage bucket name.':`Ready to copy "${selected.path}".`;
 }
+
+function setDirection(d){
+ dir=d;store.set('direction',d);
+ document.querySelectorAll('.direction-switch button').forEach(b=>b.classList.toggle('active',b.dataset.dir===d));
+ $('pageTitle').textContent=reverse()?'Google to OneDrive':'OneDrive to Google';
+ $('folderTitle').textContent=reverse()?'Choose OneDrive destination folder':'Choose OneDrive folder';
+ $('folderSub').innerHTML=reverse()?'Open a folder, then press <b>Copy into this folder</b>.':'Open a folder, then press <b>Select this folder</b>.';
+ $('step3Title').textContent=reverse()?'Choose what to copy and start':'Choose destination and start';
+ $('step3Sub').textContent=reverse()?'A folder named after the source is created inside your OneDrive folder.':'Subfolders become Drive folders, Photos albums, or bucket paths.';
+ $('fwdOptions').style.display=reverse()?'none':'';
+ $('revOptions').style.display=reverse()?'':'none';
+ // The OneDrive folder means something different in each direction, so start over.
+ selected=null;$('sel').textContent='none';setStep('step2',false,'2');
+ showSource();
+ if(accounts.microsoftAccount)status();
+ renderFolders();updateStart();
+}
+document.querySelectorAll('.direction-switch button').forEach(b=>b.onclick=()=>setDirection(b.dataset.dir));
+
+function showSource(){
+ const s=$('source').value;
+ $('srcPhotos').style.display=s==='gphotos'?'':'none';
+ $('srcDrive').style.display=s==='gdrive'?'':'none';
+ $('srcTakeout').style.display=s==='takeout'?'':'none';
+ $('mergeRow').style.display=!reverse()||s==='takeout'?'':'none';
+ if(reverse()&&s==='gdrive'&&!$('gList').children.length)gBrowse();
+ updateStart();
+}
+$('source').onchange=showSource;
+
+// Google Photos picker: Google's own window, polled until the user presses Done.
+$('pickPhotos').onclick=async()=>{
+ const token=++pickToken;
+ const win=window.open('about:blank','gphotos-picker','width=1100,height=800'); // opened now so popup blockers allow it
+ srcSel.gphotos=null;updateStart();
+ try{
+  const s=await post('/api/picker/sessions');
+  if(win){win.location=s.pickerUri;$('pickStatus').textContent='Waiting for you to press Done in the Google Photos window…'}
+  else $('pickStatus').innerHTML=`Your browser blocked the Google Photos window. <a href="${esc(s.pickerUri)}" target="_blank" rel="noopener">Open Google Photos</a>, pick your items and press Done.`;
+  const until=Date.now()+30*60*1000;
+  while(Date.now()<until&&token===pickToken){
+   // Background tabs slow timers down, so also check as soon as the user returns to this tab.
+   await new Promise(r=>{const t=setTimeout(done,3000);function done(){clearTimeout(t);document.removeEventListener('visibilitychange',done);r()}document.addEventListener('visibilitychange',done)});
+   const r=await api('/api/picker/sessions/'+encodeURIComponent(s.id));
+   if(!r.ready)continue;
+   if(token!==pickToken)return;
+   srcSel.gphotos={id:s.id,name:`Google Photos ${new Date().toISOString().slice(0,10)}`,count:r.count};
+   $('pickStatus').textContent=r.count?`${num(r.count)} item(s) selected${r.videos?` (${num(r.videos)} videos)`:''}. Press Choose again to change the selection.`:'Nothing was selected. Press Choose to try again.';
+   updateStart();return;
+  }
+  if(token===pickToken)$('pickStatus').textContent='Timed out waiting for Google Photos. Press Choose to try again.';
+ }catch(e){if(win)win.close();$('pickStatus').textContent=e.message}
+};
+
+// Google Drive folder browser.
+async function gBrowse(){
+ const cur=gStack[gStack.length-1], ul=$('gList');
+ $('gCrumb').textContent=gStack.map(s=>s.name).join(' / ');
+ ul.innerHTML='<li class="small folder-action-item">Loading…</li>';
+ let items;
+ try{items=await api('/api/gdrive/children?id='+encodeURIComponent(cur.id))}
+ catch(e){ul.innerHTML='<li class="no folder-action-item">'+esc(e.message)+'</li>';return}
+ ul.innerHTML='';
+ if(gStack.length>1){const li=document.createElement('li');li.className='folder-action-item';li.innerHTML='<a>⬆ Back</a>';li.onclick=()=>{gStack.pop();gBrowse()};ul.append(li)}
+ const isSel=srcSel.gdrive?.id===cur.id;
+ const pick=document.createElement('li');pick.className='folder-action-item';
+ pick.innerHTML=`<button type="button" class="${isSel?'':'primary'}" style="width:100%">${isSel?'✓ Selected':'Copy this folder'}</button>`;
+ pick.querySelector('button').onclick=()=>{srcSel.gdrive={id:cur.id,name:cur.name,path:gStack.map(s=>s.name).join('/')};$('gSel').textContent=srcSel.gdrive.path;updateStart();gBrowse()};
+ ul.append(pick);
+ items.filter(i=>i.isFolder).forEach(i=>{const li=document.createElement('li');li.innerHTML='<a>📁 '+esc(i.name)+'</a>';li.onclick=()=>{gStack.push({id:i.id,name:i.name});gBrowse()};ul.append(li)});
+ const nf=items.filter(i=>!i.isFolder).length;
+ if(nf){const li=document.createElement('li');li.className='small folder-action-item';li.textContent=num(nf)+' file(s) in this folder';ul.append(li)}
+}
+
+// Google Takeout folder on this computer.
+$('takeoutPath').oninput=()=>{srcSel.takeout=null;updateStart()};
+$('takeoutCheck').onclick=async()=>{
+ const p=$('takeoutPath').value.trim();
+ if(!p)return;
+ $('takeoutStatus').textContent='Checking…';
+ try{
+  const s=await api('/api/takeout/check?path='+encodeURIComponent(p));
+  srcSel.takeout={id:p,name:p.split(/[\\/]/).filter(Boolean).pop()||'Takeout'};
+  $('takeoutStatus').innerHTML=`${num(s.files)} files (${fmt(s.bytes)}): ${num(s.media)} photos/videos and ${num(s.sidecars)} metadata files.`+(s.archives?` <span class=no>${num(s.archives)} archive(s) found. Extract them first, or they are copied as .zip files.</span>`:'');
+ }catch(e){srcSel.takeout=null;$('takeoutStatus').innerHTML='<span class=no>'+esc(e.message)+'</span>'}
+ updateStart();
+};
 $('dest').onchange=()=>{$('bucket').style.display=$('dest').value==='gcs'?'':'none';$('fallbackRow').style.display=$('dest').value==='photos'?'':'none';updateStart()};
 $('bucket').oninput=updateStart;
 $('go').onclick=async()=>{
  if(!selected)return;
  $('go').disabled=true;
+ if(reverse()){
+  const src=sourceChoice();
+  try{await post('/api/jobs',{direction:'to_onedrive',source:$('source').value,sourceId:src.id,sourceName:src.name,targetId:selected.id,targetName:selected.path,merge:$('mergeMetadata').checked,skipExisting:$('skipExisting').checked});await refresh();location.hash='transfer-activity'}
+  catch(e){alert(e.message)}
+  finally{updateStart()}
+  return;
+ }
  try{await post('/api/jobs',{folderId:selected.id,folderName:selected.name,dest:$('dest').value,bucket:$('bucket').value.trim(),merge:$('mergeMetadata').checked,skipExisting:$('skipExisting').checked,fallback:$('dest').value==='photos'&&$('fallback').checked});await refresh();location.hash='transfer-activity'}
  catch(e){alert(e.message)}
  finally{updateStart()}
@@ -722,7 +892,7 @@ $('go').onclick=async()=>{
 async function loadSettings(){const s=await api('/api/settings');$('setConcurrency').value=s.concurrency;$('setSpeed').value=s.speedLimitMBps}
 $('settingsForm').onsubmit=async e=>{
  e.preventDefault();
- try{await post('/api/settings',{concurrency:Number($('setConcurrency').value),speedLimitMBps:Number($('setSpeed').value)});$('settingsNote').textContent='Saved.';setTimeout(()=>$('settingsNote').textContent='',2500)}
+ try{await send('PUT','/api/settings',{concurrency:Number($('setConcurrency').value),speedLimitMBps:Number($('setSpeed').value)});$('settingsNote').textContent='Saved.';setTimeout(()=>$('settingsNote').textContent='',2500)}
  catch(err){$('settingsNote').textContent=err.message}
 };
 
@@ -746,8 +916,8 @@ function jobActions(j,t){
   j.active?`<button onclick="act(${j.id},'pause')">Pause</button>`:'',
   !j.active&&resumable?`<button class="primary" onclick="act(${j.id},'resume')">Resume</button>`:'',
   !j.active&&t.n('failed')?`<button onclick="act(${j.id},'retry')">Retry failed (${num(t.n('failed'))})</button>`:'',
-  !j.active&&t.n('skipped')?`<button onclick="act(${j.id},'skipped-to-drive')">Send skipped to Drive</button>`:'',
-  t.n('skipped')?`<a class="download-link" target="_blank" rel="noopener" href="/skipped.html?job=${j.id}">Download skipped files</a>`:'',
+  !j.active&&t.n('skipped')&&j.direction!=='to_onedrive'?`<button onclick="act(${j.id},'skipped-to-drive')">Send skipped to Drive</button>`:'',
+  t.n('skipped')&&j.direction!=='to_onedrive'?`<a class="download-link" target="_blank" rel="noopener" href="/skipped.html?job=${j.id}">Download skipped files</a>`:'',
  ].join('');
 }
 
@@ -773,16 +943,19 @@ async function refresh(){
   $('overallBytes').textContent=`${fmt(t.completedBytes)} / ${fmt(t.totBytes)}`;
   $('overallBadge').className='badge '+(statusClass(j.status)?'no':'ok');
   $('overallBadge').textContent=statusText(j.status);
-  $('overallNote').textContent=j.active&&j.current?`Transferring: ${j.current.name}`:j.status==='paused'&&j.error?j.error:`Job #${j.id}: ${j.folder_name} → ${j.dest} · ${statusText(j.status)}`;
+  $('overallNote').textContent=j.active&&j.current?`Transferring: ${j.current.name}`:j.status==='paused'&&j.error?j.error:`Job #${j.id}: ${route(j)} · ${statusText(j.status)}`;
 
   const numSkipped=t.n('skipped');
   $('skippedBadge').textContent=num(numSkipped)+' files';
   $('skippedBadge').className='badge '+(numSkipped?'no':'ok');
-  $('skippedMsg').textContent=numSkipped?`${num(numSkipped)} file(s) in job #${j.id} could not go to Google Photos.`:'No files skipped.';
+  $('skippedMsg').textContent=numSkipped?`${num(numSkipped)} file(s) in job #${j.id} were skipped: ${j.skippedFiles?.[0]?.error||'not supported by the destination'}.`:'No files skipped.';
   $('skippedSummaryText').textContent=`Show skipped file names (${num(numSkipped)})`;
   $('skippedList').innerHTML=j.skippedFiles?.length?j.skippedFiles.map(f=>'<li>'+esc(f.dir+'/'+f.name)+'</li>').join(''):'<li style="color:var(--muted);list-style:none">None</li>';
   $('skippedActions').style.display=numSkipped?'':'none';
-  $('skippedToDrive').style.display=j.active?'none':'';
+  // Sending to Drive and downloading from OneDrive only apply to OneDrive -> Google jobs.
+  const fwd=j.direction!=='to_onedrive';
+  $('skippedToDrive').style.display=j.active||!fwd?'none':'';
+  $('skippedDownloadLink').style.display=fwd?'':'none';
   $('skippedDownloadLink').href=`/skipped.html?job=${j.id}`;
  }else{
   $('statDone').textContent='0';$('statDoneBytes').textContent='0 MB copied';
@@ -798,7 +971,7 @@ async function refresh(){
 
  $('recentJobsList').innerHTML=jobs.map(job=>`<div class="recent-job-item">
    <div>
-     <b>Job #${job.id}: ${esc(job.folder_name)} <span class="small">→</span> ${esc(job.dest)}</b>
+     <b>Job #${job.id}: ${esc(route(job))}</b>
      <p class="small">${esc(job.created_at||'')}</p>
    </div>
    <span class="job-status ${statusClass(job.status)}">${esc(statusText(job.status))}</span>
@@ -809,7 +982,7 @@ async function refresh(){
   return `<article class="job">
     <div class="job-top">
       <div>
-        <div class="job-title">${esc(j.folder_name)} <span class="small">→</span> ${esc(j.dest)}</div>
+        <div class="job-title">${esc(route(j))}</div>
         <div class="job-meta">Job #${j.id} · Started ${esc(j.created_at||'')} · ${num(t.n('done'))} copied${t.n('existing')?' · '+num(t.n('existing'))+' already copied before':''}${t.n('skipped')?' · '+num(t.n('skipped'))+' skipped':''}${t.n('failed')?' · '+num(t.n('failed'))+' failed':''}</div>
       </div>
       <span class="job-status ${statusClass(j.status)}">${esc(statusText(j.status))}</span>
@@ -826,6 +999,7 @@ async function refresh(){
  }).join('')||'<p class="small">No transfers yet. Start one in step 3.</p>';
 }
 
+setDirection(store.get('direction')==='to_onedrive'?'to_onedrive':'to_google');
 status().then(browse);refresh();exiftoolStatus();loadSettings();
 setInterval(refresh,2000);setInterval(status,30000);setInterval(exiftoolStatus,30000);
 $('helpBtn').onclick=()=>$('help').showModal();

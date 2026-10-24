@@ -1,7 +1,11 @@
 const tokens = require('./tokens');
-const { http } = require('./http');
+const db = require('./db');
+const { http, sleep } = require('./http');
 
 const P = 'microsoft';
+const GRAPH = 'https://graph.microsoft.com/v1.0';
+const UPLOAD_CHUNK = 32 * 320 * 1024; // 10 MiB; Graph needs multiples of 320 KiB
+const SIMPLE_UPLOAD_MAX = 4 * 1024 * 1024;
 const tenant = () => process.env.MS_TENANT || 'common';
 const redirect = () => `${process.env.BASE_URL || 'http://localhost:3000'}/auth/microsoft/callback`;
 let refreshing = null;
@@ -20,7 +24,7 @@ function authUrl(state) {
   }
   return `https://login.microsoftonline.com/${tenant()}/oauth2/v2.0/authorize?` + new URLSearchParams({
     client_id: process.env.MS_CLIENT_ID, response_type: 'code', redirect_uri: redirect(),
-    response_mode: 'query', scope: 'offline_access Files.Read User.Read', prompt: 'select_account', state,
+    response_mode: 'query', scope: 'offline_access Files.ReadWrite User.Read', prompt: 'select_account', state,
   });
 }
 
@@ -49,13 +53,25 @@ async function tokenReq(params) {
     access_token: j.access_token,
     refresh_token: j.refresh_token || prev.refresh_token,
     expires_at: Date.now() + (j.expires_in - 120) * 1000,
+    scope: j.scope || prev.scope,
   });
 }
 
 async function exchange(code) {
   await tokenReq({ grant_type: 'authorization_code', code });
   acct = null;
+  // OneDrive folder ids belong to one Microsoft account; forget them if the account changed.
+  const email = (await account())?.email;
+  const saved = db.prepare("select value from maps where kind='meta' and key='microsoft-account'").get()?.value;
+  if (email && saved && saved !== email) {
+    db.prepare("delete from maps where kind='onedrive'").run();
+    memo.clear();
+  }
+  if (email) db.prepare("insert or replace into maps(kind, key, value) values('meta', 'microsoft-account', ?)").run(email);
 }
+
+// Copying into OneDrive needs Files.ReadWrite, granted by sign-ins made after it was added.
+const canWrite = () => /Files\.ReadWrite/i.test(tokens.load(P)?.scope || '');
 
 function refresh(t) {
   if (!refreshing) {
@@ -116,6 +132,97 @@ async function children(id) {
   return out;
 }
 
+// ---------- Writing to OneDrive ----------
+const itemBase = (id) => (id === 'root' ? '/me/drive/root' : `/me/drive/items/${id}`);
+
+async function graphSend(method, u, body) {
+  const r = await http(GRAPH + u, {
+    method,
+    headers: { Authorization: 'Bearer ' + (await token()), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return r;
+}
+
+// OneDrive rejects these characters and trailing dots/spaces in names.
+function safeName(name) {
+  const clean = String(name).replace(/["*:<>?/\\|]/g, '_').replace(/[. ]+$/, '');
+  return clean || '_';
+}
+
+// Memoised "create once" helper so parallel workers never create duplicate folders.
+const memo = new Map();
+function ensure(key, create) {
+  if (memo.has(key)) return memo.get(key);
+  const p = (async () => {
+    const row = db.prepare("select value from maps where kind='onedrive' and key=?").get(key);
+    if (row) return row.value;
+    const v = await create();
+    db.prepare("insert or replace into maps(kind,key,value) values('onedrive',?,?)").run(key, v);
+    return v;
+  })();
+  memo.set(key, p);
+  p.catch(() => memo.delete(key));
+  return p;
+}
+
+// Returns the id of targetId/dirPath, creating missing folders.
+async function folderPath(targetId, dirPath) {
+  let parent = targetId;
+  let acc = targetId;
+  for (const seg of dirPath.split('/').filter(Boolean).map(safeName)) {
+    acc += '/' + seg;
+    const p = parent;
+    parent = await ensure(acc, async () => {
+      const r = await graphSend('POST', `${itemBase(p)}/children`,
+        { name: seg, folder: {}, '@microsoft.graph.conflictBehavior': 'fail' });
+      if (r.ok) return (await r.json()).id;
+      if (r.status !== 409) throw new Error(`OneDrive folder ${r.status}: ${await r.text()}`);
+      return (await graph(`${itemBase(p)}:/${encodeURIComponent(seg)}?$select=id`)).id; // already exists
+    });
+  }
+  return parent;
+}
+
+// Uploads src (a { range(start, end) } reader) as parentId/name. Never overwrites: clashes are renamed.
+async function upload({ parentId, name, size }, src) {
+  const target = `${itemBase(parentId)}:/${encodeURIComponent(safeName(name))}:`;
+  if (size <= SIMPLE_UPLOAD_MAX) {
+    const body = size ? await src.range(0, size - 1) : Buffer.alloc(0);
+    const r = await http(`${GRAPH}${target}/content?@microsoft.graph.conflictBehavior=rename`, {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer ' + (await token()), 'Content-Type': 'application/octet-stream' },
+      body,
+    });
+    if (!r.ok) throw new Error(`OneDrive upload ${r.status}: ${await r.text()}`);
+    return (await r.json()).id;
+  }
+  const s = await graphSend('POST', `${target}/createUploadSession`, { item: { '@microsoft.graph.conflictBehavior': 'rename' } });
+  if (!s.ok) throw new Error(`OneDrive upload session ${s.status}: ${await s.text()}`);
+  const { uploadUrl } = await s.json();
+  for (let off = 0; off < size;) {
+    const end = Math.min(off + UPLOAD_CHUNK, size) - 1;
+    const buf = await src.range(off, end);
+    for (let attempt = 0; ; attempt++) {
+      let r;
+      try {
+        // The upload URL is pre-authorised; sending the bearer token here is rejected.
+        r = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Range': `bytes ${off}-${end}/${size}` }, body: buf });
+      } catch (e) {
+        if (attempt >= 5) throw e;
+        await sleep(2 ** attempt * 1000);
+        continue;
+      }
+      if (r.status === 202) break;
+      if (r.ok) return (await r.json()).id;
+      if ((r.status === 429 || r.status >= 500) && attempt < 5) { await sleep(2 ** attempt * 1000); continue; }
+      throw new Error(`OneDrive chunk upload ${r.status}: ${await r.text()}`);
+    }
+    off = end + 1;
+  }
+  throw new Error('OneDrive upload finished without final response');
+}
+
 async function downloadUrl(id) {
   const j = await graph(`/me/drive/items/${id}?$select=id,@microsoft.graph.downloadUrl`);
   return j['@microsoft.graph.downloadUrl'] || null;
@@ -155,4 +262,4 @@ function reader(id) {
   };
 }
 
-module.exports = { authUrl, exchange, connected, problem, account, disconnect, keepAlive, children, item, downloadUrl, reader };
+module.exports = { authUrl, exchange, connected, canWrite, problem, account, disconnect, keepAlive, children, item, downloadUrl, reader, folderPath, upload };

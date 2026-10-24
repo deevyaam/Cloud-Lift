@@ -8,6 +8,9 @@ const SCOPES = [
   'https://www.googleapis.com/auth/drive.file',
   'https://www.googleapis.com/auth/photoslibrary.appendonly',
   'https://www.googleapis.com/auth/devstorage.read_write',
+  // Reading, for Google -> OneDrive transfers
+  'https://www.googleapis.com/auth/drive.readonly',
+  'https://www.googleapis.com/auth/photospicker.mediaitems.readonly',
 ].join(' ');
 const redirect = () => `${process.env.BASE_URL || 'http://localhost:3000'}/auth/google/callback`;
 let refreshing = null;
@@ -54,7 +57,14 @@ async function tokenReq(params) {
     access_token: j.access_token,
     refresh_token: j.refresh_token || prev.refresh_token,
     expires_at: Date.now() + (j.expires_in - 120) * 1000,
+    scope: j.scope || prev.scope,
   });
+}
+
+// Reading Drive and Photos needs scopes granted by sign-ins made after they were added.
+function canRead() {
+  const scope = tokens.load(P)?.scope || '';
+  return scope.includes('/auth/drive.readonly') && scope.includes('/auth/photospicker.mediaitems.readonly');
 }
 
 async function exchange(code) {
@@ -260,4 +270,4 @@ async function photosUpload({ name, size, mime, albumId }, bodyStream) {
   });
 }
 
-module.exports = { authUrl, exchange, connected, problem, account, disconnect, keepAlive, driveFolder, driveUpload, gcsUpload, photosAlbum, photosUpload, CHUNK };
+module.exports = { authUrl, exchange, connected, canRead, problem, account, disconnect, keepAlive, auth, driveFolder, driveUpload, gcsUpload, photosAlbum, photosUpload, CHUNK };

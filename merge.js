@@ -128,4 +128,4 @@ async function removeTemp(filePath) {
   await fsp.rm(path.dirname(filePath), { recursive: true, force: true });
 }
 
-module.exports = { CHUNK, isSidecar, sidecarNames, findSidecar, findMediaForSidecar, mergeFile, removeTemp };
+module.exports = { CHUNK, isSidecar, sidecarNames, findSidecar, findMediaForSidecar, mergeFile, removeTemp, streamToFile };
