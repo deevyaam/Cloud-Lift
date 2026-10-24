@@ -2,824 +2,716 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CloudLift — OneDrive to Google Transfer</title>
-<script>(function(){const t=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
+<title>CloudLift</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>(function(){let t=null;try{t=localStorage.getItem('theme')}catch(e){}t=t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)})();</script>
 <style>
 :root{
-  --primary:#696cff;--primary-dark:#5b5fe5;--ink:#384152;--muted:#8590a5;--line:#e7eaf0;
-  --surface:#ffffff;--bg:#f5f5fb;--surface-alt:#f8f8ff;--border-alt:#e7e7ff;
-  --input-bg:#ffffff;--btn-bg:#f0f0ff;--btn-hover:#dfdfff;--search-bg:#f5f5fb;
-  --highlight-bg:#f0f0ff;--code-bg:#fff0f2;--warning-bg:#fff4dc;--success-bg:#e8faed;
-  --success:#1f9d4d;--warning:#a66a00;--danger:#ff3e5d;
-  --shadow:0 2px 6px #43597112,0 8px 24px #4359710d;
+  --bg:#f5f6fa;--surface:#ffffff;--surface-2:#f1f3f8;--line:#e3e6ee;
+  --ink:#171c2a;--ink-2:#454e63;--muted:#76809a;
+  --primary:#5458ee;--primary-2:#4347d9;--primary-soft:#ecedff;--on-primary:#fff;
+  --ok:#14904a;--ok-soft:#e5f6ec;--warn:#a85d00;--warn-soft:#fdf2df;--bad:#d42146;--bad-soft:#fdebef;
+  --shadow:0 1px 2px #1a22400d,0 6px 20px #1a224012;--shadow-lg:0 12px 40px #1a224026;
+  --radius:16px;--radius-sm:10px;
+  color-scheme:light;
 }
 [data-theme="dark"]{
-  --primary:#7e82ff;--primary-dark:#696cff;--ink:#e3e7ee;--muted:#94a3b8;--line:#2e3649;
-  --surface:#1e2433;--bg:#121620;--surface-alt:#262d3e;--border-alt:#333c54;
-  --input-bg:#161a25;--btn-bg:#2a3248;--btn-hover:#353e5a;--search-bg:#161a25;
-  --highlight-bg:#262f4b;--code-bg:#2c1b22;--warning-bg:#332917;--success-bg:#162b22;
-  --success:#4ade80;--warning:#fbbf24;--danger:#fb7185;
-  --shadow:0 4px 12px #00000045,0 8px 24px #00000030;
+  --bg:#0d1017;--surface:#161a24;--surface-2:#1d2230;--line:#293043;
+  --ink:#eceff5;--ink-2:#b9c0cf;--muted:#8a93a8;
+  --primary:#8487ff;--primary-2:#9a9cff;--primary-soft:#24284a;--on-primary:#0d1017;
+  --ok:#4ade80;--ok-soft:#132a1d;--warn:#fbbf24;--warn-soft:#2d2411;--bad:#fb7185;--bad-soft:#2e1820;
+  --shadow:0 1px 2px #0006,0 8px 24px #0005;--shadow-lg:0 16px 48px #000a;
+  color-scheme:dark;
 }
-*{box-sizing:border-box}html{scroll-behavior:smooth}
-body{
-  margin:0;background:var(--bg);color:var(--ink);
-  font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-  transition:background-color .2s ease,color .2s ease;
-}
-.layout-wrapper{min-height:100vh;display:flex;flex-direction:column}
-.top-nav{
-  position:sticky;top:0;z-index:100;background:var(--surface);
-  border-bottom:1px solid var(--line);box-shadow:var(--shadow);
-  padding:0 24px;transition:background-color .2s ease,border-color .2s ease;
-}
-.top-nav-inner{
-  max-width:1440px;margin:0 auto;height:68px;
-  display:flex;align-items:center;justify-content:space-between;gap:20px;
-}
-.top-nav-left{display:flex;align-items:center;gap:32px}
-.brand{
-  display:flex;align-items:center;gap:10px;color:var(--primary);
-  font-size:21px;font-weight:800;letter-spacing:-.4px;text-decoration:none;
-}
-.brand-mark{
-  display:grid;place-items:center;width:34px;height:34px;border-radius:10px;
-  background:linear-gradient(135deg,#696cff,#8d8fff);color:white;font-weight:900;
-  box-shadow:0 5px 10px #696cff45;
-}
-.top-menu{display:flex;align-items:center;gap:6px}
-.menu-link{
-  display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;
-  color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;
-  transition:all .15s ease;
-}
-.menu-link:hover,.menu-link.active{background:var(--btn-bg);color:var(--primary)}
-.menu-icon{width:16px;text-align:center;font-size:15px}
-.top-nav-right{display:flex;align-items:center;gap:18px;flex:1;max-width:550px;justify-content:flex-end}
-.search{
-  display:flex;align-items:center;gap:9px;color:var(--muted);flex:1;max-width:320px;
-  background:var(--search-bg);border-radius:8px;padding:8px 14px;
-  border:1px solid var(--line);transition:all .15s ease;
-}
-.search:focus-within{border-color:var(--primary);background:var(--input-bg)}
-.search input{border:0;outline:0;background:transparent;width:100%;font:inherit;color:var(--ink)}
-.nav-actions{display:flex;align-items:center;gap:14px;color:var(--muted)}
-.theme-btn{
-  display:grid;place-items:center;width:34px;height:34px;border-radius:8px;
-  background:var(--btn-bg);color:var(--ink);cursor:pointer;font-size:16px;
-  user-select:none;transition:all .15s ease;border:0;
-}
-.theme-btn:hover{background:var(--btn-hover);color:var(--primary)}
-.link-btn{background:transparent;color:var(--muted);padding:6px 8px;font-size:14px;font-weight:600}
-.link-btn:hover{background:var(--btn-bg);color:var(--primary)}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--primary)}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 55%,transparent);outline-offset:2px;border-radius:8px}
+h1,h2,h3{margin:0;letter-spacing:-.02em}
+.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+.logo{width:28px;height:28px;flex:none;stroke:none;fill:none}
+.small{font-size:13px;color:var(--muted)}
 
-.content{padding:28px 24px 36px;max-width:1440px;margin:0 auto;width:100%;flex:1}
-.page-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:24px}
-.eyebrow{color:var(--primary);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin:0 0 5px}
-.page-heading h1{font-size:24px;letter-spacing:-.4px;margin:0;color:var(--ink)}
-.page-heading p{color:var(--muted);margin:5px 0 0}
+/* Top bar */
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 85%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.topbar-inner{max-width:1080px;margin:0 auto;padding:0 20px;height:64px;display:flex;align-items:center;gap:18px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;color:var(--ink);text-decoration:none;letter-spacing:-.02em}
+.brand-mark{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#5458ee,#9b6bff);color:#fff;box-shadow:0 6px 16px #5458ee55}
+.brand-mark .i{width:20px;height:20px}
+.tabs{display:flex;gap:4px;margin-left:12px}
+.tab{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;color:var(--ink-2);text-decoration:none;font-weight:600;font-size:14px}
+.tab:hover{background:var(--surface-2)}
+.tab.active{background:var(--primary-soft);color:var(--primary)}
+.count{min-width:20px;padding:0 6px;border-radius:999px;background:var(--surface-2);color:var(--ink-2);font-size:12px;text-align:center}
+.tab.active .count{background:var(--primary);color:var(--on-primary)}
+.top-actions{margin-left:auto;display:flex;gap:6px}
+.icon-btn{display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:10px;background:transparent;color:var(--ink-2);cursor:pointer}
+.icon-btn:hover{background:var(--surface-2);color:var(--ink)}
 
-.card{
-  min-width:0;background:var(--surface);border:1px solid var(--line);
-  border-radius:10px;box-shadow:var(--shadow);padding:20px;
-  transition:background-color .2s ease,border-color .2s ease;
-}
-.card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:16px}
-.card-title{display:flex;gap:12px;align-items:center}
-.step{
-  display:grid;place-items:center;width:30px;height:30px;border-radius:8px;
-  background:var(--btn-bg);color:var(--primary);font-size:12px;font-weight:800;
-}
-.step.done{background:var(--success-bg);color:var(--success)}
-.card h2{font-size:15px;line-height:1.2;margin:0;color:var(--ink);font-weight:700}
-.card-subtitle{font-size:11px;color:var(--muted);margin:3px 0 0}
-.badge{
-  display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;
-  font-size:11px;font-weight:800;white-space:nowrap;background:var(--btn-bg);color:var(--primary);
-}
-.badge:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
-.badge.ok{background:var(--success-bg);color:var(--success)}
-.badge.no{background:var(--code-bg);color:var(--danger)}
-.small{color:var(--muted);font-size:12px}
-.ok{color:var(--success);font-weight:700}
-.no{color:var(--danger);font-weight:700}
+/* Layout */
+main{max-width:1080px;margin:0 auto;padding:32px 20px 64px}
+.hero{text-align:center;margin:8px auto 28px;max-width:640px}
+.hero h1{font-size:34px;font-weight:800;line-height:1.15}
+.hero p{color:var(--ink-2);margin:10px 0 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
 
-/* Row 1: 4 equal stat cards */
-.row-stats{
-  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;margin-bottom:20px;
-}
-.stat-card{
-  display:flex;flex-direction:column;justify-content:space-between;padding:18px 20px;
-}
-.stat-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.stat-icon{
-  display:grid;place-items:center;width:32px;height:32px;border-radius:8px;
-  font-size:14px;font-weight:800;background:var(--btn-bg);color:var(--primary);
-}
-.stat-icon.done{background:var(--success-bg);color:var(--success)}
-.stat-icon.pending{background:var(--warning-bg);color:var(--warning)}
-.stat-icon.speed{background:var(--btn-bg);color:var(--primary)}
-.stat-icon.time{background:var(--btn-bg);color:#38bdf8}
-.stat-label{
-  font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
-}
-.stat-value{
-  font-size:26px;font-weight:800;letter-spacing:-.5px;color:var(--ink);line-height:1.2;
-}
-.stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
+/* Direction tiles */
+.direction{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:880px;margin:0 auto 24px}
+.dir-tile{display:flex;align-items:center;gap:16px;padding:18px 20px;text-align:left;cursor:pointer;background:var(--surface);border:2px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);transition:border-color .15s,transform .15s}
+.dir-tile:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--primary) 45%,var(--line))}
+.dir-tile[aria-checked="true"]{border-color:var(--primary);background:linear-gradient(var(--surface),var(--surface)) padding-box,linear-gradient(135deg,var(--primary),#9b6bff) border-box;border-color:transparent}
+.dir-logos{display:flex;align-items:center;gap:6px;padding:10px;border-radius:12px;background:var(--surface-2)}
+.dir-logos .i{color:var(--muted);width:16px}
+.dir-tile b{display:block;font-size:16px}
+.dir-tile span.small{display:block;margin-top:2px}
+.dir-check{margin-left:auto;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:2px solid var(--line);color:transparent;flex:none}
+.dir-tile[aria-checked="true"] .dir-check{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.dir-check .i{width:14px;height:14px;stroke-width:3}
 
-/* Row 2: accounts + folder browser; Row 3: destination, progress, settings */
-.row-setup{
-  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:20px;margin-bottom:20px;
-}
-.row-start{
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-bottom:20px;
-}
-.setup-card{display:flex;flex-direction:column}
-.connections{display:grid;grid-template-columns:1fr;gap:10px}
-.connection{
-  display:flex;align-items:center;gap:10px;min-width:0;border:1px solid var(--line);
-  border-radius:8px;padding:12px;background:var(--surface-alt);
-  transition:background-color .2s ease,border-color .2s ease;
-}
-.connection .service{min-width:0;flex:1}
-.connection b{display:block;font-size:13px;overflow-wrap:anywhere;color:var(--ink)}
-.connection p{margin:3px 0 0;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.connection-actions{display:flex;gap:6px;flex:none}
-.service-icon{
-  display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:8px;
-  color:#fff;font-weight:800;background:linear-gradient(135deg,#1aa8de,#5664ed);
-}
-.service-icon.google{background:linear-gradient(135deg,#f5b53f,#e55b66)}
-button,select,input{font:inherit}
-button,.btn{
-  border:0;cursor:pointer;border-radius:6px;padding:8px 12px;background:var(--btn-bg);
-  color:var(--primary);font-weight:700;font-size:12px;transition:all .15s ease;
-  text-decoration:none;display:inline-block;white-space:nowrap;
-}
-button:hover,.btn:hover{background:var(--btn-hover)}
-.primary{background:var(--primary);color:#fff;box-shadow:0 4px 9px #696cff36}
-.primary:hover{background:var(--primary-dark)}
-button:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
-button:disabled:hover{background:var(--primary)}
-select,input{
-  width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:6px;
-  background:var(--input-bg);color:var(--ink);outline:0;transition:all .15s ease;
-}
-select:focus,input:focus{border-color:var(--primary);box-shadow:0 0 0 3px #696cff2b}
-.destination{display:grid;gap:10px}
-.destination-row{display:flex;gap:8px}
-.destination-row input{flex:1}
-.destination-row button{white-space:nowrap}
-.merge-option{display:flex;align-items:flex-start;gap:9px;color:var(--ink);font-size:12px}
-.merge-option input{width:auto;margin-top:3px;flex:none}
-.merge-option small{display:block;color:var(--muted);margin-top:3px}
-.settings-form{display:grid;gap:12px}
-.settings-form label{display:grid;gap:5px;font-size:12px;font-weight:600;color:var(--ink)}
-.settings-form small{color:var(--muted);font-weight:400}
-.settings-actions{display:flex;align-items:center;gap:10px}
-.heading-side{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
-.direction-switch{display:flex;padding:3px;border-radius:9px;background:var(--surface);border:1px solid var(--line)}
-.direction-switch button{background:transparent;color:var(--muted);padding:7px 12px}
-.direction-switch button.active{background:var(--primary);color:#fff}
-.source-panel{display:grid;gap:8px}
-.source-panel .browser-path{margin:0}
-.folder-list.mini{grid-template-columns:repeat(2,minmax(0,1fr));max-height:200px;overflow-y:auto;gap:6px}
-.folder-list.mini li{padding:7px 10px}
-.help-dialog{
-  max-width:560px;width:calc(100% - 32px);border:1px solid var(--line);border-radius:12px;
-  background:var(--surface);color:var(--ink);padding:24px;box-shadow:var(--shadow);
-}
-.help-dialog::backdrop{background:#0008}
-.help-dialog h2{margin:0 0 12px;font-size:18px}
-.help-dialog h3{margin:16px 0 6px;font-size:14px}
-.help-dialog li{margin:6px 0}
-.overall-body{display:flex;flex-direction:column;flex:1;justify-content:center}
-.progress-meta{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
-.progress-pct{font-size:24px;font-weight:800;color:var(--primary);letter-spacing:-.4px}
-.progress-bytes{font-size:12px;color:var(--muted);font-weight:600}
+/* Live transfer panel */
+.live{max-width:880px;margin:0 auto 24px;padding:24px;display:flex;gap:28px;align-items:center}
+.ring{position:relative;width:132px;height:132px;flex:none}
+.ring svg{width:132px;height:132px;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:10}
+.ring .track{stroke:var(--surface-2)}
+.ring .bar{stroke:var(--primary);stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+.live.paused .ring .bar{stroke:var(--warn)}
+.live.bad .ring .bar{stroke:var(--bad)}
+.ring-label{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring-label b{font-size:28px;font-weight:800;letter-spacing:-.03em}
+.ring-label span{font-size:12px;color:var(--muted);font-weight:600}
+.live-info{flex:1;min-width:0}
+.live-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.live-top h2{font-size:19px}
+.route{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.route .logo{width:22px;height:22px}
+.route .arrow{color:var(--muted)}
+.route b{overflow-wrap:anywhere}
+.current{margin:6px 0 0;color:var(--ink-2);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
+.stat{padding:12px;border-radius:12px;background:var(--surface-2)}
+.stat span{display:block;font-size:12px;color:var(--muted);font-weight:600}
+.stat b{display:block;font-size:17px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat small{color:var(--muted);font-size:12px}
+.spark{display:block;width:100%;height:22px;margin-top:4px}
+.spark polyline{fill:none;stroke:var(--primary);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
-progress{
-  display:block;width:100%;height:9px;border-radius:999px;
-  accent-color:var(--primary);margin:10px 0;background:var(--line);
-}
-progress::-webkit-progress-bar{background:var(--line);border-radius:999px}
-progress::-webkit-progress-value{background:var(--primary);border-radius:999px}
+/* Banner */
+.banner{max-width:880px;margin:0 auto 24px;padding:14px 16px;display:flex;align-items:center;gap:12px;border-radius:var(--radius);background:var(--ok-soft);color:var(--ink)}
+.banner.bad{background:var(--bad-soft)}
+.banner .badge-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--ok);color:#fff;flex:none}
+.banner.bad .badge-icon{background:var(--bad)}
+.banner-text{flex:1;min-width:0}
+.banner-text b{display:block}
 
-/* Folder browser and transfer activity */
-.folder-card{height:400px;display:flex;flex-direction:column;overflow:hidden}
-.activity-card{max-height:560px;display:flex;flex-direction:column;overflow:hidden;margin-bottom:20px}
-.job-progress-meta{display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--muted)}
-.browser-path{
-  padding:8px 12px;margin:0 0 10px;border-radius:6px;background:var(--search-bg);
-  color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;
-  white-space:nowrap;border:1px solid var(--line);flex:none;
-}
-.folder-scroll-container,.jobs-scroll-container{
-  flex:1;overflow-y:auto;padding-right:4px;
-}
-.folder-list{
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;
-  list-style:none;padding:0;margin:0;border:0;
-}
-.folder-list li{
-  padding:10px 12px;border:1px solid var(--line);border-radius:8px;
-  background:var(--surface-alt);display:flex;align-items:center;
-  justify-content:flex-start;gap:8px;cursor:pointer;transition:all .15s ease;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
-.folder-list li:hover{
-  border-color:var(--primary);background:var(--btn-bg);transform:translateY(-1px);
-}
-.folder-list li.folder-action-item{grid-column:1/-1}
-.folder-list li.small{grid-column:1/-1;background:transparent;border:0;padding:6px 2px}
-.folder-list li a{
-  color:var(--ink);font-weight:600;font-size:12px;text-decoration:none;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;
-}
-.folder-list li a:hover{color:var(--primary)}
-.selection{
-  display:flex;justify-content:space-between;gap:12px;margin:10px 0 0;padding:10px 12px;
-  background:var(--search-bg);border-radius:6px;color:var(--muted);font-size:12px;
-  border:1px solid var(--line);flex:none;
-}
-.selection b{color:var(--ink);overflow-wrap:anywhere;text-align:right}
+/* Wizard */
+.wizard{max-width:880px;margin:0 auto;overflow:hidden}
+.step{border-top:1px solid var(--line)}
+.step:first-child{border-top:0}
+.step-head{width:100%;display:flex;align-items:center;gap:16px;padding:20px 24px;background:transparent;border:0;text-align:left;cursor:pointer}
+.step-head:hover{background:color-mix(in srgb,var(--surface-2) 60%,transparent)}
+.step-num{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--surface-2);color:var(--ink-2);font-weight:700;flex:none;transition:background .2s}
+.step-num .i{display:none;width:18px;height:18px;stroke-width:3}
+.step.open .step-num{background:var(--primary);color:var(--on-primary)}
+.step.done .step-num{background:var(--ok);color:#fff}
+.step.done .step-num .n{display:none}
+.step.done .step-num .i{display:block}
+.step-title{flex:1;min-width:0}
+.step-h{display:block;font-size:17px;font-weight:700;letter-spacing:-.02em}
+.step-sum{display:block;margin:2px 0 0;font-size:14px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.step.done .step-sum{color:var(--ink-2)}
+.step-head > .i{color:var(--muted);transition:transform .2s}
+.step.open .step-head > .i{transform:rotate(90deg)}
+.step-body{display:none;padding:0 24px 24px 76px}
+.step.open .step-body{display:block;animation:reveal .2s ease}
+@keyframes reveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 
-.job{
-  min-width:0;border:1px solid var(--line);border-radius:8px;padding:0 14px 14px;
-  margin-top:12px;background:var(--surface-alt);overflow:hidden;
-  transition:background-color .2s ease,border-color .2s ease;
-}
-.job:first-child{margin-top:0}
-.job-top{
-  display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
-  margin:0 -14px 12px;padding:12px 14px;background:var(--surface);
-  border-bottom:1px solid var(--line);
-}
-.job-title{font-size:13px;font-weight:800;overflow-wrap:anywhere;color:var(--ink)}
-.job-title .small{color:var(--primary)}
-.job-meta{color:var(--muted);font-size:11px;margin-top:2px}
-.job-status{
-  padding:4px 8px;border-radius:999px;background:var(--success-bg);color:var(--success);
-  font-size:10px;font-weight:800;white-space:nowrap;
-}
-.job-status.paused{background:var(--warning-bg);color:var(--warning)}
-.job-status.error{background:var(--code-bg);color:var(--danger)}
-.current-file{
-  margin:10px 0 0;padding:8px 10px;border-radius:6px;background:var(--highlight-bg);
-  color:var(--primary);font-size:11px;overflow-wrap:anywhere;
-}
-.current-file b{color:var(--ink)}
-.job-note{margin-top:8px;color:var(--muted);font-size:11px}
-.job-note.warn{color:var(--warning)}
-.job-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
-.download-link{
-  display:inline-block;padding:7px 10px;border-radius:6px;background:var(--success-bg);
-  color:var(--success);text-decoration:none;font-size:11px;font-weight:700;
-}
-.download-link:hover{filter:brightness(1.15)}
-pre{
-  background:var(--code-bg);color:var(--danger);padding:8px;border-radius:6px;
-  overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid var(--line);
-  font-size:11px;margin-top:8px;
-}
+/* Buttons and inputs */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:600;font-size:14px;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background .15s,border-color .15s}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary);box-shadow:0 6px 16px color-mix(in srgb,var(--primary) 35%,transparent)}
+.btn.primary:hover{background:var(--primary-2)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--ink-2)}
+.btn.ghost:hover{background:var(--surface-2)}
+.btn.danger{color:var(--bad)}
+.btn.lg{padding:13px 24px;font-size:16px;border-radius:12px}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.btn.primary:disabled:hover{background:var(--primary)}
+.input{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);outline:0}
+.input:focus{border-color:var(--primary);box-shadow:0 0 0 4px color-mix(in srgb,var(--primary) 18%,transparent)}
+.row{display:flex;gap:8px}
+.row .input{flex:1}
 
-/* Row 4: Skipped files card and Recent activity card side by side */
-.row-footer-cards{
-  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-bottom:24px;
-}
-.skipped-card,.recent-card{
-  min-height:220px;display:flex;flex-direction:column;
-}
-.skipped-card-body,.recent-scroll-container{
-  flex:1;display:flex;flex-direction:column;
-}
-details.skipped{
-  margin-top:10px;border:1px solid var(--line);border-radius:7px;
-  background:var(--code-bg);padding:9px 11px;color:var(--danger);
-}
-details.skipped summary{cursor:pointer;font-size:12px;font-weight:700}
-.skipped-scroll-box{
-  max-height:160px;overflow-y:auto;margin-top:8px;border:1px solid var(--line);
-  border-radius:6px;background:var(--surface);
-}
-.skipped-scroll-box ul{list-style:disc;padding:8px 12px 8px 24px;margin:0}
-.skipped-scroll-box li{font-size:11px;color:var(--danger);padding:3px 0;overflow-wrap:anywhere}
-.recent-scroll-container{max-height:200px;overflow-y:auto}
-.recent-job-item{
-  padding:10px 12px;border:1px solid var(--line);border-radius:7px;
-  margin-bottom:8px;background:var(--surface-alt);display:flex;
-  justify-content:space-between;align-items:center;
-}
-.recent-job-item b{font-size:12px;color:var(--ink)}
+/* Accounts */
+.accounts{display:grid;gap:10px}
+.account{display:flex;align-items:center;gap:14px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.account-text{flex:1;min-width:0}
+.account-text b{display:block}
+.account-text > span{display:block;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+.pill:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.run{background:var(--primary-soft);color:var(--primary)}
+.pill.run:before{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.3}}
 
-/* Responsive Breakpoints: 4/3/2 cols at 1280px, 2 cols at 768px, 1 col at 375px */
-@media(max-width:1049px){
-  .row-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-  .row-setup{grid-template-columns:1fr;gap:16px}
-  .row-start{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-  .row-start .setup-card:last-child{grid-column:span 2}
-  .row-footer-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-  .folder-list{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .top-nav-left{gap:16px}
-  .search{max-width:200px}
+/* Folder browser */
+.browser{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.browser-bar{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-2);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.crumbs{display:flex;align-items:center;gap:2px;flex-wrap:wrap;flex:1;min-width:0}
+.crumbs button{border:0;background:transparent;padding:4px 6px;border-radius:6px;cursor:pointer;color:var(--ink-2);font-weight:600;font-size:14px}
+.crumbs button:hover{background:var(--surface)}
+.crumbs button:last-child{color:var(--ink)}
+.crumbs .i{width:14px;color:var(--muted)}
+.filter{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--muted);width:200px}
+.filter input{border:0;outline:0;background:transparent;width:100%;font-size:14px;color:var(--ink)}
+.folder-grid{list-style:none;margin:0;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;max-height:290px;overflow-y:auto}
+.folder-grid li{min-width:0}
+.folder{width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;font-weight:500;font-size:14px}
+.folder:hover{border-color:var(--primary);background:var(--primary-soft)}
+.folder .i{color:#e8a92e;fill:#f7c95c55}
+.folder span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grid-note{grid-column:1/-1;padding:6px 2px;font-size:13px;color:var(--muted)}
+.browser-foot{display:flex;align-items:center;gap:12px;padding:12px;border-top:1px solid var(--line);background:var(--surface-2);flex-wrap:wrap}
+.browser-foot .small{flex:1;min-width:160px}
+
+/* Source and destination choices */
+.seg{display:inline-flex;padding:4px;border-radius:12px;background:var(--surface-2);gap:4px;margin-bottom:16px;flex-wrap:wrap}
+.seg button{display:flex;align-items:center;gap:8px;padding:8px 14px;border:0;border-radius:9px;background:transparent;cursor:pointer;font-weight:600;font-size:14px;color:var(--ink-2)}
+.seg button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.seg .logo{width:20px;height:20px}
+.panel-note{margin:0 0 14px;color:var(--ink-2)}
+.choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.choice{position:relative;display:flex;gap:12px;align-items:flex-start;padding:14px;border:2px solid var(--line);border-radius:12px;cursor:pointer;background:var(--surface)}
+.choice:hover{border-color:color-mix(in srgb,var(--primary) 40%,var(--line))}
+.choice input{position:absolute;opacity:0;pointer-events:none}
+.choice:has(input:checked){border-color:var(--primary);background:var(--primary-soft)}
+.choice:has(input:focus-visible){outline:3px solid color-mix(in srgb,var(--primary) 55%,transparent);outline-offset:2px}
+.choice b{display:block}
+.choice span.small{display:block}
+.choice-icons{display:flex;gap:2px;padding-top:2px}
+.choice-icons .logo{width:22px;height:22px}
+.choice-icons .i{width:22px;height:22px;color:var(--primary)}
+
+/* Review */
+.review{display:grid;gap:8px;margin:0 0 16px}
+.review div{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:12px;background:var(--surface-2)}
+.review dt{width:48px;flex:none;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.review dd{margin:0;min-width:0;overflow-wrap:anywhere;font-weight:600}
+.options{display:grid;gap:10px;margin-bottom:20px}
+.check{display:flex;gap:12px;align-items:flex-start;cursor:pointer}
+.check input{width:18px;height:18px;margin-top:3px;accent-color:var(--primary);flex:none}
+.check b{display:block;font-weight:600}
+.check small{display:block;color:var(--muted);font-size:13px}
+.check:has(input:disabled){cursor:default}
+.start-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.hint{color:var(--ink-2);font-size:14px}
+
+/* History */
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.page-head h1{font-size:28px;font-weight:800}
+.page-head p{margin:4px 0 0;color:var(--ink-2)}
+.jobs{display:grid;gap:12px}
+.job{padding:18px 20px}
+.job-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.job-head .route{flex:1}
+.job-meta{margin:6px 0 10px;font-size:13px;color:var(--muted)}
+.progress{height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.progress span{display:block;height:100%;background:var(--primary);border-radius:999px;transition:width .6s ease}
+.job.finished .progress span{background:var(--ok)}
+.job-facts{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0 0;font-size:13px;color:var(--ink-2)}
+.job-facts b{color:var(--ink)}
+.job .actions{margin-top:14px}
+details.more{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+details.more summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--ink-2)}
+.file-list{margin:10px 0 0;padding:10px 12px 10px 28px;max-height:200px;overflow:auto;border-radius:10px;background:var(--surface-2);font-size:13px}
+.file-list li{overflow-wrap:anywhere;padding:2px 0}
+.file-list .err{color:var(--bad)}
+.error-box{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--bad-soft);color:var(--bad);font-size:13px;overflow-wrap:anywhere}
+.empty{text-align:center;padding:56px 20px}
+.empty .bubble{display:grid;place-items:center;width:64px;height:64px;margin:0 auto 14px;border-radius:20px;background:var(--primary-soft);color:var(--primary)}
+.empty .bubble .i{width:30px;height:30px}
+.empty h2{font-size:19px}
+.empty p{color:var(--ink-2);margin:6px 0 16px}
+
+/* Drawer, dialog, toasts */
+.scrim{position:fixed;inset:0;background:#0b0e1880;z-index:80;animation:fade .2s}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--surface);z-index:90;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;animation:slide .25s ease}
+@keyframes slide{from{transform:translateX(30px);opacity:0}}
+@keyframes fade{from{opacity:0}}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line)}
+.drawer-head h2{font-size:19px}
+.drawer-body{padding:20px;overflow-y:auto}
+.field{display:grid;gap:6px;margin-bottom:18px}
+.field label{font-weight:600}
+.field small{color:var(--muted);font-size:13px}
+.help h3{font-size:15px;margin:20px 0 8px}
+.help h3:first-child{margin-top:0}
+.help ol,.help ul{margin:0;padding-left:20px;color:var(--ink-2)}
+.help li{margin:6px 0}
+dialog.confirm{border:0;border-radius:var(--radius);padding:24px;width:min(420px,calc(100% - 32px));background:var(--surface);color:var(--ink);box-shadow:var(--shadow-lg)}
+dialog.confirm::backdrop{background:#0b0e1880}
+dialog.confirm p{margin:0 0 20px;font-size:16px}
+dialog.confirm .actions{justify-content:flex-end}
+.toasts{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:100;display:grid;gap:8px;width:min(440px,calc(100% - 32px))}
+.toast{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;background:var(--ink);color:var(--bg);box-shadow:var(--shadow-lg);font-weight:500;animation:toast .25s ease}
+.toast.bad{background:var(--bad);color:#fff}
+.toast.ok .i{color:var(--ok)}
+@keyframes toast{from{transform:translateY(10px);opacity:0}}
+
+/* Phones */
+@media (max-width:720px){
+  .topbar-inner{padding:0 12px;gap:8px}
+  .brand span.name{display:none}
+  .tabs{margin-left:0;gap:2px}
+  .tab{padding:8px 10px}
+  .tab > .i{display:none}
+  .icon-btn{width:36px;height:36px}
+  .top-actions{gap:2px}
+  main{padding:20px 16px 48px}
+  .hero h1{font-size:26px}
+  .direction{grid-template-columns:1fr;gap:10px}
+  .live{flex-direction:column;align-items:stretch;padding:18px}
+  .ring{margin:0 auto}
+  .stats{grid-template-columns:1fr 1fr}
+  .step-head{padding:16px}
+  .step-body{padding:0 16px 20px}
+  .choice-grid{grid-template-columns:1fr}
+  .filter{width:100%}
+  .job{padding:16px}
 }
-@media(max-width:767px){
-  body{font-size:13px}
-  .content{padding:16px 12px 24px}
-  .top-nav{padding:0 14px}
-  .top-nav-inner{height:auto;padding:12px 0;flex-direction:column;align-items:stretch;gap:12px}
-  .top-nav-left{justify-content:space-between;width:100%}
-  .top-nav-right{max-width:none;width:100%;justify-content:space-between}
-  .search{max-width:none}
-  .row-stats{grid-template-columns:1fr;gap:12px}
-  .row-setup{grid-template-columns:1fr;gap:12px}
-  .row-start{grid-template-columns:1fr;gap:12px}
-  .row-start .setup-card:last-child{grid-column:span 1}
-  .folder-card{height:auto;max-height:480px}
-  .connection{flex-wrap:wrap}
-  .row-footer-cards{grid-template-columns:1fr;gap:12px}
-  .folder-list{grid-template-columns:1fr}
-  .page-heading{align-items:flex-start;flex-direction:column;margin-bottom:16px}
-  .heading-side{align-items:flex-start}
-  .page-heading h1{font-size:20px}
-  .connections{grid-template-columns:1fr}
-  .card{padding:15px}
-}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
-<div class="layout-wrapper">
-  <header class="top-nav">
-    <div class="top-nav-inner">
-      <div class="top-nav-left">
-        <div class="brand"><span class="brand-mark">↗</span><span>CloudLift</span></div>
-        <nav class="top-menu">
-          <a class="menu-link active" href="#connect-accounts"><span class="menu-icon">⌂</span><span>Transfer</span></a>
-          <a class="menu-link" href="#transfer-activity"><span class="menu-icon">◷</span><span>Activity</span></a>
-          <a class="menu-link" href="#settings"><span class="menu-icon">⚙</span><span>Settings</span></a>
-        </nav>
-      </div>
-      <div class="top-nav-right">
-        <div class="search"><span>⌕</span><input id="folderFilter" aria-label="Filter folders" placeholder="Filter folders"></div>
-        <div class="nav-actions">
-          <button id="helpBtn" class="link-btn" type="button">Help</button>
-          <span id="themeToggle" class="theme-btn" title="Toggle dark/light mode">☼</span>
-        </div>
-      </div>
+<!-- Icons: stroke icons (i-*) and simplified service logos (logo-*) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-cloud-up" viewBox="0 0 24 24"><path d="M7 18a5 5 0 1 1 .9-9.9A6 6 0 0 1 19.2 10 4 4 0 0 1 17.5 18"/><path d="M12 20v-7M9 15.5l3-3 3 3"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h6M14 7h6M4 17h10M18 17h2"/><circle cx="12" cy="7" r="2.5"/><circle cx="16" cy="17" r="2.5"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 13.5A8.5 8.5 0 1 1 10.5 3.5a6.5 6.5 0 0 0 10 10z"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.5-2.7 2.5M12 17h.01"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></symbol>
+  <symbol id="i-retry" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5l9 16H3z"/><path d="M12 10v4M12 17h.01"/></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></symbol>
+  <symbol id="i-bucket" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="logo-onedrive" viewBox="0 0 24 24"><path fill="#0364b8" d="M9.8 8.3a6 6 0 0 1 10.6 2.3A4.2 4.2 0 0 1 19.3 19H9.5z"/><path fill="#28a8ea" d="M6.4 19A4.4 4.4 0 0 1 5.6 10.3a6.5 6.5 0 0 1 11.6.6L14 19z"/></symbol>
+  <symbol id="logo-gdrive" viewBox="0 0 24 24"><path fill="#0f9d58" d="M8.2 3.5h7.6L10 13.6 6.2 20.2 2.4 13.6z"/><path fill="#fbbc04" d="M8.2 3.5h7.6l5.8 10.1h-7.6z"/><path fill="#4285f4" d="M6.2 20.2l3.8-6.6h11.6l-3.8 6.6z"/></symbol>
+  <symbol id="logo-gphotos" viewBox="0 0 24 24"><path fill="#ea4335" d="M12 12V3a4.5 4.5 0 0 1 0 9z"/><path fill="#4285f4" d="M12 12h9a4.5 4.5 0 0 1-9 0z"/><path fill="#34a853" d="M12 12v9a4.5 4.5 0 0 1 0-9z"/><path fill="#fbbc04" d="M12 12H3a4.5 4.5 0 0 1 9 0z"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#transfer"><span class="brand-mark"><svg class="i"><use href="#i-cloud-up"/></svg></span><span class="name">CloudLift</span></a>
+    <nav class="tabs" aria-label="Pages">
+      <a class="tab" href="#transfer" data-view="transfer"><svg class="i"><use href="#i-swap"/></svg>Transfer</a>
+      <a class="tab" href="#history" data-view="history"><svg class="i"><use href="#i-history"/></svg>History <span class="count" id="historyCount">0</span></a>
+    </nav>
+    <div class="top-actions">
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="Switch light or dark theme"><svg class="i"><use href="#i-moon"/></svg></button>
+      <button class="icon-btn" id="helpBtn" type="button" aria-label="Help"><svg class="i"><use href="#i-help"/></svg></button>
+      <button class="icon-btn" id="settingsBtn" type="button" aria-label="Settings"><svg class="i"><use href="#i-sliders"/></svg></button>
     </div>
-  </header>
+  </div>
+</header>
 
-  <main class="content">
-    <div class="page-heading">
-      <div>
-        <p class="eyebrow">Cloud migration workspace</p>
-        <h1 id="pageTitle">OneDrive to Google</h1>
-        <p>Move your files securely and keep track of every transfer.</p>
-      </div>
-      <div class="heading-side">
-        <div class="direction-switch" role="group" aria-label="Transfer direction">
-          <button type="button" data-dir="to_google" class="active">OneDrive → Google</button>
-          <button type="button" data-dir="to_onedrive">Google → OneDrive</button>
-        </div>
-        <span id="readyBadge" class="badge">Checking…</span>
-      </div>
-    </div>
-
-    <!-- Row 1: Four equal stat cards -->
-    <div class="row-stats">
-      <div class="card stat-card">
-        <div class="stat-header">
-          <span class="stat-icon done">✓</span>
-          <span class="stat-label">Done</span>
-        </div>
-        <div class="stat-value" id="statDone">0</div>
-        <span class="stat-sub" id="statDoneBytes">0 MB copied</span>
-      </div>
-
-      <div class="card stat-card">
-        <div class="stat-header">
-          <span class="stat-icon pending">⏳</span>
-          <span class="stat-label">Pending</span>
-        </div>
-        <div class="stat-value" id="statPending">0</div>
-        <span class="stat-sub" id="statPendingBytes">0 MB waiting</span>
-      </div>
-
-      <div class="card stat-card">
-        <div class="stat-header">
-          <span class="stat-icon speed">⚡</span>
-          <span class="stat-label" id="statSpeedLabel">Speed</span>
-        </div>
-        <div class="stat-value" id="statSpeed">—</div>
-        <span class="stat-sub" id="statSpeedSub">No transfer running</span>
-      </div>
-
-      <div class="card stat-card">
-        <div class="stat-header">
-          <span class="stat-icon time">⏱</span>
-          <span class="stat-label">Time remaining</span>
-        </div>
-        <div class="stat-value" id="statEta">—</div>
-        <span class="stat-sub">Estimated time</span>
-      </div>
+<main>
+  <!-- Transfer page -->
+  <section id="view-transfer">
+    <div class="hero">
+      <h1 id="heroTitle">Move your files between clouds</h1>
+      <p>Pick a direction, choose what to copy, and CloudLift does the rest. It can pause, resume and skip anything already copied.</p>
     </div>
 
-    <!-- Row 2: Step 1 accounts, step 2 folder -->
-    <div class="row-setup">
-      <section id="connect-accounts" class="card setup-card">
-        <div class="card-header">
-          <div class="card-title">
-            <span class="step" id="step1">1</span>
-            <div>
-              <h2>Connect accounts</h2>
-              <p class="card-subtitle">Sign in to the services you want to use.</p>
-            </div>
-          </div>
-        </div>
-        <div class="connections">
-          <div class="connection">
-            <span class="service-icon">⊞</span>
-            <div class="service">
-              <b>Microsoft OneDrive</b>
-              <p id="msS">Checking…</p>
-            </div>
-            <div class="connection-actions" id="msActions"></div>
-          </div>
-          <div class="connection">
-            <span class="service-icon google">G</span>
-            <div class="service">
-              <b>Google services</b>
-              <p id="gS">Checking…</p>
-            </div>
-            <div class="connection-actions" id="gActions"></div>
-          </div>
-        </div>
-        <p class="small" style="margin-top:auto">Use <b>Switch</b> to sign in with a different account.</p>
-      </section>
-
-      <section class="card folder-card">
-        <div class="card-header">
-          <div class="card-title">
-            <span class="step" id="step2">2</span>
-            <div>
-              <h2 id="folderTitle">Choose OneDrive folder</h2>
-              <p class="card-subtitle" id="folderSub">Open a folder, then press <b>Select this folder</b>.</p>
-            </div>
-          </div>
-        </div>
-        <p class="browser-path" id="crumb"></p>
-        <div class="folder-scroll-container">
-          <ul class="folder-list" id="list"></ul>
-        </div>
-        <p class="selection">
-          <span>Selected folder</span>
-          <b id="sel">none</b>
-        </p>
-      </section>
+    <div class="direction" role="radiogroup" aria-label="Transfer direction">
+      <button class="dir-tile" type="button" role="radio" data-dir="to_google" aria-checked="true">
+        <span class="dir-logos"><svg class="logo"><use href="#logo-onedrive"/></svg><svg class="i"><use href="#i-arrow"/></svg><svg class="logo"><use href="#logo-gphotos"/></svg><svg class="logo"><use href="#logo-gdrive"/></svg></span>
+        <span><b>OneDrive to Google</b><span class="small">Into Google Photos, Drive or Cloud Storage</span></span>
+        <span class="dir-check"><svg class="i"><use href="#i-check"/></svg></span>
+      </button>
+      <button class="dir-tile" type="button" role="radio" data-dir="to_onedrive" aria-checked="false">
+        <span class="dir-logos"><svg class="logo"><use href="#logo-gphotos"/></svg><svg class="logo"><use href="#logo-gdrive"/></svg><svg class="i"><use href="#i-arrow"/></svg><svg class="logo"><use href="#logo-onedrive"/></svg></span>
+        <span><b>Google to OneDrive</b><span class="small">From Google Photos, Drive or a Takeout export</span></span>
+        <span class="dir-check"><svg class="i"><use href="#i-check"/></svg></span>
+      </button>
     </div>
 
-    <!-- Row 3: Step 3 destination, overall progress, settings -->
-    <div class="row-start">
-      <section id="destination" class="card setup-card">
-        <div class="card-header">
-          <div class="card-title">
-            <span class="step">3</span>
-            <div>
-              <h2 id="step3Title">Choose destination and start</h2>
-              <p class="card-subtitle" id="step3Sub">Subfolders become Drive folders, Photos albums, or bucket paths.</p>
-            </div>
-          </div>
-        </div>
-        <div class="destination">
-          <div id="fwdOptions" class="destination">
-            <select id="dest">
-              <option value="auto">Auto: Photos + Drive</option>
-              <option value="drive">Google Drive — everything</option>
-              <option value="photos">Google Photos — media only</option>
-              <option value="gcs">Cloud Storage bucket</option>
-            </select>
-            <input id="bucket" placeholder="Bucket name" style="display:none">
-            <label class="merge-option" id="fallbackRow" style="display:none"><input id="fallback" type="checkbox" checked><span>Send files Google Photos can't take to Google Drive<small>Otherwise they are listed under Skipped files.</small></span></label>
-          </div>
-          <div id="revOptions" class="destination" style="display:none">
-            <select id="source">
-              <option value="gphotos">Google Photos — pick photos and videos</option>
-              <option value="gdrive">Google Drive — a folder</option>
-              <option value="takeout">Google Takeout export on this computer</option>
-            </select>
-            <div id="srcPhotos" class="source-panel">
-              <button type="button" id="pickPhotos">Choose in Google Photos</button>
-              <p class="small" id="pickStatus">Opens Google Photos in a new window. Pick your photos and videos, then press <b>Done</b>.</p>
-            </div>
-            <div id="srcDrive" class="source-panel" style="display:none">
-              <p class="browser-path" id="gCrumb"></p>
-              <ul class="folder-list mini" id="gList"></ul>
-              <p class="selection"><span>Drive folder</span><b id="gSel">none</b></p>
-            </div>
-            <div id="srcTakeout" class="source-panel" style="display:none">
-              <div class="destination-row"><input id="takeoutPath" placeholder="C:\Users\you\Downloads\Takeout"><button type="button" id="takeoutCheck">Check folder</button></div>
-              <p class="small" id="takeoutStatus">Extract every Takeout .zip into one folder, then paste that folder's path here.</p>
-            </div>
-          </div>
-          <label class="merge-option"><input id="skipExisting" type="checkbox" checked><span>Skip files already copied by earlier transfers<small>Unchanged files that went to the same destination are not uploaded again.</small></span></label>
-          <label class="merge-option" id="mergeRow"><input id="mergeMetadata" type="checkbox" disabled><span>Merge Google Takeout dates and locations into photos<small id="exiftoolStatus">Checking ExifTool…</small></span></label>
-          <button class="primary" id="go" disabled>Start transfer</button>
-          <p class="small" id="goHint">Connect both accounts in step 1.</p>
-        </div>
-      </section>
-
-      <section class="card setup-card">
-        <div class="card-header">
-          <div class="card-title">
-            <span class="step">%</span>
-            <div>
-              <h2>Overall progress</h2>
-              <p class="card-subtitle">Latest transfer.</p>
-            </div>
-          </div>
-          <span id="overallBadge" class="badge">Idle</span>
-        </div>
-        <div class="overall-body">
-          <div class="progress-meta">
-            <span class="progress-pct" id="overallPct">0%</span>
-            <span class="progress-bytes" id="overallBytes">0 MB / 0 MB</span>
-          </div>
-          <progress id="overallProgressBar" value="0" max="100"></progress>
-          <p class="small" id="overallNote">No transfer running</p>
-        </div>
-      </section>
-
-      <section id="settings" class="card setup-card">
-        <div class="card-header">
-          <div class="card-title">
-            <span class="step">⚙</span>
-            <div>
-              <h2>Settings</h2>
-              <p class="card-subtitle">Applies to running transfers too.</p>
-            </div>
-          </div>
-        </div>
-        <form class="settings-form" id="settingsForm">
-          <label>Files transferred at once
-            <input id="setConcurrency" type="number" min="1" max="16" step="1" required>
-          </label>
-          <label>Speed limit (MB/s)
-            <input id="setSpeed" type="number" min="0" max="1000" step="0.5" required>
-            <small>0 means no limit.</small>
-          </label>
-          <div class="settings-actions">
-            <button class="primary" type="submit">Save settings</button>
-            <span class="small" id="settingsNote"></span>
-          </div>
-        </form>
-      </section>
-    </div>
-
-    <!-- Row 4: Transfer activity -->
-    <section id="transfer-activity" class="card activity-card">
-      <div class="card-header">
-        <div class="card-title">
-          <span class="step">↗</span>
-          <div>
-            <h2>Transfer activity</h2>
-            <p class="card-subtitle">Monitor live progress and manage your jobs.</p>
-          </div>
-        </div>
-        <span class="small">Updates every 2s</span>
+    <!-- Shown while a transfer is running or paused -->
+    <section class="card live" id="livePanel" hidden aria-live="polite">
+      <div class="ring">
+        <svg viewBox="0 0 132 132"><circle class="track" cx="66" cy="66" r="56"/><circle class="bar" id="ringBar" cx="66" cy="66" r="56" stroke-dasharray="351.86" stroke-dashoffset="351.86"/></svg>
+        <div class="ring-label"><b id="livePct">0%</b><span id="liveBytes"></span></div>
       </div>
-      <div class="jobs-scroll-container">
-        <div id="jobs"></div>
+      <div class="live-info">
+        <div class="live-top"><div class="route" id="liveRoute"></div><span class="pill run" id="livePill">Transferring</span></div>
+        <p class="current" id="liveCurrent"></p>
+        <div class="stats">
+          <div class="stat"><span>Copied</span><b id="liveCopied">0</b><small id="liveCopiedBytes"></small></div>
+          <div class="stat"><span>Speed</span><b id="liveSpeed">—</b><svg class="spark" viewBox="0 0 120 22" preserveAspectRatio="none"><polyline id="sparkLine" points=""/></svg></div>
+          <div class="stat"><span>Time left</span><b id="liveEta">—</b></div>
+          <div class="stat"><span>Waiting</span><b id="liveWaiting">0</b><small id="liveWaitingBytes"></small></div>
+        </div>
+        <div class="actions" id="liveActions"></div>
       </div>
     </section>
 
-    <!-- Row 5: Skipped files card and Recent activity card side by side -->
-    <div class="row-footer-cards">
-      <section class="card skipped-card">
-        <div class="card-header">
-          <div class="card-title">
-            <span class="step">⚠</span>
-            <div>
-              <h2>Skipped files</h2>
-              <p class="card-subtitle">Files that could not be copied.</p>
-            </div>
-          </div>
-          <span id="skippedBadge" class="badge">0 files</span>
-        </div>
-        <div class="skipped-card-body">
-          <p class="small" id="skippedMsg">No files skipped so far.</p>
-          <details class="skipped" id="skippedBox">
-            <summary id="skippedSummaryText">Show skipped file names (0)</summary>
-            <div class="skipped-scroll-box">
-              <ul id="skippedList"></ul>
-            </div>
-          </details>
-          <div class="job-actions" id="skippedActions" style="display:none">
-            <button id="skippedToDrive">Send them to Google Drive</button>
-            <a id="skippedDownloadLink" class="download-link" target="_blank" rel="noopener" href="#">Download skipped files</a>
-          </div>
+    <!-- Shown after the latest transfer finishes -->
+    <div class="banner" id="lastBanner" hidden>
+      <span class="badge-icon"><svg class="i"><use href="#i-check"/></svg></span>
+      <div class="banner-text"><b id="bannerTitle"></b><span class="small" id="bannerText"></span></div>
+      <a class="btn ghost" href="#history">Details</a>
+      <button class="icon-btn" id="bannerClose" type="button" aria-label="Dismiss"><svg class="i"><use href="#i-x"/></svg></button>
+    </div>
+
+    <div class="card wizard">
+      <section class="step" id="step-connect">
+        <button class="step-head" type="button" data-step="connect" aria-expanded="false">
+          <span class="step-num"><span class="n">1</span><svg class="i"><use href="#i-check"/></svg></span>
+          <span class="step-title"><span class="step-h">Connect your accounts</span><span class="step-sum" id="sum-connect">Checking…</span></span>
+          <svg class="i"><use href="#i-chevron"/></svg>
+        </button>
+        <div class="step-body">
+          <div class="accounts" id="accountList"></div>
         </div>
       </section>
-
-      <section class="card recent-card">
-        <div class="card-header">
-          <div class="card-title">
-            <span class="step">≡</span>
-            <div>
-              <h2>Recent activity</h2>
-              <p class="card-subtitle">Job history.</p>
-            </div>
+      <section class="step" id="step-from">
+        <button class="step-head" type="button" data-step="from" aria-expanded="false">
+          <span class="step-num"><span class="n">2</span><svg class="i"><use href="#i-check"/></svg></span>
+          <span class="step-title"><span class="step-h">Choose what to copy</span><span class="step-sum" id="sum-from"></span></span>
+          <svg class="i"><use href="#i-chevron"/></svg>
+        </button>
+        <div class="step-body" id="fromBody"></div>
+      </section>
+      <section class="step" id="step-to">
+        <button class="step-head" type="button" data-step="to" aria-expanded="false">
+          <span class="step-num"><span class="n">3</span><svg class="i"><use href="#i-check"/></svg></span>
+          <span class="step-title"><span class="step-h">Choose where it goes</span><span class="step-sum" id="sum-to"></span></span>
+          <svg class="i"><use href="#i-chevron"/></svg>
+        </button>
+        <div class="step-body" id="toBody"></div>
+      </section>
+      <section class="step" id="step-start">
+        <button class="step-head" type="button" data-step="start" aria-expanded="false">
+          <span class="step-num"><span class="n">4</span><svg class="i"><use href="#i-check"/></svg></span>
+          <span class="step-title"><span class="step-h">Review and start</span><span class="step-sum" id="sum-start"></span></span>
+          <svg class="i"><use href="#i-chevron"/></svg>
+        </button>
+        <div class="step-body">
+          <dl class="review">
+            <div><dt>From</dt><dd id="revFrom">—</dd></div>
+            <div><dt>To</dt><dd id="revTo">—</dd></div>
+          </dl>
+          <div class="options">
+            <label class="check"><input type="checkbox" id="skipExisting" checked><span><b>Skip files already copied</b><small>Unchanged files that earlier transfers already copied to the same place are not uploaded again.</small></span></label>
+            <label class="check" id="fallbackRow"><input type="checkbox" id="fallback" checked><span><b>Send files Google Photos can't take to Google Drive</b><small>Otherwise they are listed as skipped.</small></span></label>
+            <label class="check" id="mergeRow"><input type="checkbox" id="mergeMetadata" disabled><span><b>Keep Google Takeout dates and locations</b><small id="exiftoolStatus">Checking ExifTool…</small></span></label>
           </div>
-        </div>
-        <div class="recent-scroll-container">
-          <div id="recentJobsList">
-            <p class="small">No jobs yet.</p>
+          <div class="start-row">
+            <button class="btn primary lg" id="go" type="button" disabled><svg class="i"><use href="#i-play"/></svg>Start transfer</button>
+            <span class="hint" id="goHint"></span>
           </div>
         </div>
       </section>
     </div>
-  </main>
+  </section>
+
+  <!-- History page -->
+  <section id="view-history" hidden>
+    <div class="page-head">
+      <div><h1>History</h1><p>Every transfer, with what was copied, skipped or failed.</p></div>
+      <a class="btn primary" href="#transfer"><svg class="i"><use href="#i-swap"/></svg>New transfer</a>
+    </div>
+    <div class="jobs" id="historyList"></div>
+  </section>
+</main>
+
+<!-- Building blocks moved into steps 2 and 3 depending on the direction -->
+<div id="parts" hidden>
+  <div id="odBrowser" class="browser">
+    <div class="browser-bar">
+      <nav class="crumbs" id="crumbs" aria-label="OneDrive folder path"></nav>
+      <label class="filter"><svg class="i"><use href="#i-search"/></svg><input id="folderFilter" placeholder="Filter folders" aria-label="Filter folders"></label>
+    </div>
+    <ul class="folder-grid" id="list"></ul>
+    <div class="browser-foot"><span class="small" id="browserHint"></span><button class="btn primary" id="selectFolder" type="button">Select this folder</button></div>
+  </div>
+
+  <div id="gSource">
+    <div class="seg" role="tablist" aria-label="Google source">
+      <button type="button" role="tab" data-src="gphotos" aria-selected="true"><svg class="logo"><use href="#logo-gphotos"/></svg>Google Photos</button>
+      <button type="button" role="tab" data-src="gdrive" aria-selected="false"><svg class="logo"><use href="#logo-gdrive"/></svg>Google Drive</button>
+      <button type="button" role="tab" data-src="takeout" aria-selected="false"><svg class="i"><use href="#i-archive"/></svg>Takeout export</button>
+    </div>
+    <div id="srcPhotos">
+      <p class="panel-note">Google only lets apps copy the photos and videos you pick. Choose them in Google Photos, press <b>Done</b>, and come back here.</p>
+      <div class="actions"><button class="btn primary" id="pickPhotos" type="button"><svg class="logo" style="width:18px;height:18px"><use href="#logo-gphotos"/></svg>Choose in Google Photos</button></div>
+      <p class="small" id="pickStatus" style="margin:10px 0 0"></p>
+    </div>
+    <div id="srcDrive" hidden>
+      <div class="browser">
+        <div class="browser-bar"><nav class="crumbs" id="gCrumbs" aria-label="Google Drive folder path"></nav></div>
+        <ul class="folder-grid" id="gList"></ul>
+        <div class="browser-foot"><span class="small">Docs, Sheets and Slides become Word, Excel and PowerPoint files.</span><button class="btn primary" id="gSelect" type="button">Copy this folder</button></div>
+      </div>
+    </div>
+    <div id="srcTakeout" hidden>
+      <p class="panel-note">Best for a whole Photos library. Export at <a href="https://takeout.google.com" target="_blank" rel="noopener">takeout.google.com</a>, extract every .zip into one folder, then paste that folder's path.</p>
+      <div class="row"><input class="input" id="takeoutPath" placeholder="C:\Users\you\Downloads\Takeout" aria-label="Takeout folder path"><button class="btn" id="takeoutCheck" type="button">Check folder</button></div>
+      <p class="small" id="takeoutStatus" style="margin:10px 0 0"></p>
+    </div>
+  </div>
+
+  <div id="gDest">
+    <div class="choice-grid" role="radiogroup" aria-label="Google destination">
+      <label class="choice"><input type="radio" name="dest" value="auto" checked><span class="choice-icons"><svg class="i"><use href="#i-sparkle"/></svg></span><span><b>Automatic</b><span class="small">Photos and videos to Google Photos, everything else to Drive.</span></span></label>
+      <label class="choice"><input type="radio" name="dest" value="photos"><span class="choice-icons"><svg class="logo"><use href="#logo-gphotos"/></svg></span><span><b>Google Photos</b><span class="small">Photos and videos only. Folders become albums.</span></span></label>
+      <label class="choice"><input type="radio" name="dest" value="drive"><span class="choice-icons"><svg class="logo"><use href="#logo-gdrive"/></svg></span><span><b>Google Drive</b><span class="small">Everything, with the same folders.</span></span></label>
+      <label class="choice"><input type="radio" name="dest" value="gcs"><span class="choice-icons"><svg class="i"><use href="#i-bucket"/></svg></span><span><b>Cloud Storage</b><span class="small">A Google Cloud Storage bucket.</span></span></label>
+    </div>
+    <input class="input" id="bucket" placeholder="Bucket name" aria-label="Cloud Storage bucket name" style="margin-top:12px" hidden>
+    <div class="actions" style="margin-top:16px"><button class="btn primary" id="destContinue" type="button">Continue<svg class="i"><use href="#i-arrow"/></svg></button></div>
+  </div>
 </div>
 
-<dialog id="help" class="help-dialog">
-  <h2>How CloudLift works</h2>
-  <ol>
-    <li><b>Connect accounts.</b> Sign in to Microsoft (where your files are) and Google (where they go).</li>
-    <li><b>Choose a OneDrive folder.</b> Open folders by clicking them, then press <b>Select this folder</b>. Everything inside, including subfolders, is copied.</li>
-    <li><b>Choose a destination and start.</b> <i>Auto</i> sends photos and videos to Google Photos and everything else to Google Drive.</li>
-  </ol>
-  <h3>Google → OneDrive</h3>
-  <p>Switch the direction at the top of the page. In step 2 pick the OneDrive folder to copy into, then in step 3 choose a source:</p>
-  <ul>
-    <li><b>Google Photos:</b> Google only lets apps read the photos you pick, so press <b>Choose in Google Photos</b>, select items and press Done. Repeat for more.</li>
-    <li><b>Google Drive:</b> pick any Drive folder. Google Docs, Sheets and Slides are saved as Word, Excel and PowerPoint files.</li>
-    <li><b>Google Takeout:</b> best for a whole Photos library. Export from takeout.google.com, extract all the .zip files into one folder, and paste its path. Turn on metadata merge to keep dates and locations.</li>
-  </ul>
-  <h3>Good to know</h3>
-  <ul>
-    <li>Your files stay in OneDrive. CloudLift only copies them.</li>
-    <li>You can pause and resume at any time. Transfers also resume after the server restarts.</li>
-    <li>If a sign-in expires, the transfer pauses and continues once you reconnect.</li>
-    <li>The filter box at the top filters the folders you are looking at in step 2.</li>
-  </ul>
-  <form method="dialog"><button class="primary">Close</button></form>
+<div id="scrim" class="scrim" hidden></div>
+<aside id="drawer" class="drawer" hidden aria-labelledby="drawerTitle" role="dialog">
+  <div class="drawer-head"><h2 id="drawerTitle">Settings</h2><button class="icon-btn" id="drawerClose" type="button" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
+  <div class="drawer-body">
+    <form id="settingsForm">
+      <div class="field"><label for="setConcurrency">Files transferred at once</label><input class="input" id="setConcurrency" type="number" min="1" max="16" step="1" required><small>More is faster on a good connection. 1–16.</small></div>
+      <div class="field"><label for="setSpeed">Speed limit (MB/s)</label><input class="input" id="setSpeed" type="number" min="0" max="1000" step="0.5" required><small>0 means no limit. Changes apply to running transfers too.</small></div>
+      <button class="btn primary" type="submit">Save settings</button>
+    </form>
+    <div class="help" id="helpContent">
+      <h3>How it works</h3>
+      <ol>
+        <li><b>Pick a direction</b> with the two large tiles.</li>
+        <li><b>Connect</b> Microsoft and Google once. Your sign-ins are remembered and renewed automatically.</li>
+        <li><b>Choose what to copy and where it goes</b>, review, and press Start.</li>
+      </ol>
+      <h3>OneDrive to Google</h3>
+      <ul>
+        <li><b>Automatic</b> sends photos and videos to Google Photos and everything else to Google Drive.</li>
+        <li>Turn on <b>Keep Google Takeout dates and locations</b> when copying a Takeout export that is stored in OneDrive.</li>
+      </ul>
+      <h3>Google to OneDrive</h3>
+      <ul>
+        <li><b>Google Photos:</b> Google only lets apps read the items you pick, so press Choose in Google Photos, select items and press Done. Google removes the location from these copies.</li>
+        <li><b>Google Drive:</b> any folder. Docs, Sheets and Slides are saved as Word, Excel and PowerPoint files.</li>
+        <li><b>Takeout export:</b> best for a whole library. Extract the .zip files into one folder and turn on the dates and locations option.</li>
+      </ul>
+      <h3>Good to know</h3>
+      <ul>
+        <li>Your originals are never changed or deleted. Existing files at the destination are never overwritten.</li>
+        <li>Pause and resume at any time. Transfers continue after the app restarts, and pause if a sign-in expires.</li>
+      </ul>
+    </div>
+  </div>
+</aside>
+
+<dialog class="confirm" id="confirmDlg">
+  <form method="dialog">
+    <p id="confirmMsg"></p>
+    <div class="actions"><button class="btn" value="cancel">Cancel</button><button class="btn primary" value="ok" id="confirmOk">OK</button></div>
+  </form>
 </dialog>
+<div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
 const $=id=>document.getElementById(id);
-let stack=[{id:'root',name:'OneDrive'}], selected=null, folderItems=[], accounts={}, latestJob=null;
-// Direction: 'to_google' (OneDrive is the source) or 'to_onedrive' (OneDrive is the destination).
-let dir='to_google', gStack=[{id:'root',name:'My Drive'}], srcSel={gphotos:null,gdrive:null,takeout:null}, pickToken=0;
 const store={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
+
+// ---------- State ----------
+let dir='to_google';            // 'to_google' (OneDrive is the source) or 'to_onedrive' (OneDrive is the destination)
+let source='gphotos';           // Google source in the to_onedrive direction
+let stack=[{id:'root',name:'OneDrive'}], selected=null, folderItems=[], foldersLoaded=false;
+let gStack=[{id:'root',name:'My Drive'}], srcSel={gphotos:null,gdrive:null,takeout:null}, pickToken=0;
+let accounts={}, jobs=[], openStep=null, historySig='', openDetails=new Set(), spark={job:null,values:[]};
 const reverse=()=>dir==='to_onedrive';
-const route=j=>j.direction==='to_onedrive'?`${j.folder_name} → ${j.target_name||'OneDrive'}`:`${j.folder_name} → ${j.dest}`;
+
+// ---------- Helpers ----------
 const num=n=>Number(n||0).toLocaleString();
-const fmt=b=>b>1e9?(b/1e9).toFixed(2)+' GB':(b/1e6).toFixed(1)+' MB';
-const fmtRate=b=>{if(!b)return '0 B/s';const units=['B/s','KB/s','MB/s','GB/s'];let i=0,n=b;while(n>=1024&&i<units.length-1){n/=1024;i++}return (n>=100?n.toFixed(0):n.toFixed(1))+' '+units[i]};
+const fmt=b=>{b=Number(b||0);if(b<1e3)return b+' B';const u=['KB','MB','GB','TB'];let i=-1;do{b/=1e3;i++}while(b>=1e3&&i<u.length-1);return (b>=100?b.toFixed(0):b.toFixed(1))+' '+u[i]};
+const fmtRate=b=>b?fmt(b)+'/s':'—';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const duration=s=>{if(s===null||s===undefined)return 'calculating…';if(s<=0)return 'complete';const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d?`${d}d ${h}h`:h?`${h}h ${m}m`:`${Math.max(1,m)}m`};
-const STATUS={scanning:'Scanning folders',running:'Transferring',paused:'Paused',done:'Done',done_with_errors:'Done with errors',error:'Error'};
+const duration=s=>{if(s===null||s===undefined)return 'Estimating…';if(s<=0)return 'Almost done';const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d?`${d}d ${h}h`:h?`${h}h ${m}m`:`${Math.max(1,m)} min`};
+const STATUS={scanning:'Scanning',running:'Transferring',paused:'Paused',done:'Done',done_with_errors:'Done with errors',error:'Needs attention'};
 const statusText=s=>STATUS[s]||s;
-const statusClass=s=>s==='paused'?'paused':(s==='error'||s==='done_with_errors')?'error':'';
-async function api(p,o){const r=await fetch(p,o);const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||r.status);return j}
+const statusKind=(s,active)=>active||s==='scanning'||s==='running'?'run':s==='done'?'ok':s==='paused'?'warn':'bad';
+const icon=(name,cls='i')=>`<svg class="${cls}"><use href="#${name}"/></svg>`;
+async function api(p,o){const r=await fetch(p,o);const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||`Request failed (${r.status})`);return j}
 const send=(method,p,body)=>api(p,{method,headers:{'Content-Type':'application/json'},body:body&&JSON.stringify(body)});
 const post=(p,body)=>send('POST',p,body);
-function setStep(id,done,label){$(id).classList.toggle('done',done);$(id).textContent=done?'✓':label}
 
-async function exiftoolStatus(){try{const s=await api('/api/exiftool');const box=$('mergeMetadata');box.disabled=!s.ok;$('exiftoolStatus').textContent=s.ok?`ExifTool ${s.version} ready`:'Install ExifTool and set EXIFTOOL_PATH';}catch(e){$('exiftoolStatus').textContent='Install ExifTool and set EXIFTOOL_PATH';}}
-
-function renderAccount(prefix,provider,a,configured){
- const label=provider==='microsoft'?'Microsoft':'Google';
- if(!a.connected){
-  $(prefix+'S').innerHTML=configured?'<span class=no>Not connected</span>':'<span class=no>Not configured in .env</span>';
-  $(prefix+'Actions').innerHTML=`<a class="btn primary" href="/auth/${provider}">Connect</a>`;
-  return;
- }
- if(a.problem){
-  $(prefix+'S').innerHTML='<span class=no>'+esc(a.problem)+'</span>';
-  $(prefix+'Actions').innerHTML=`<a class="btn primary" href="/auth/${provider}">Reconnect</a>`;
-  return;
- }
- const who=a.account?(a.account.email||a.account.name):'';
- if(reverse()&&!(provider==='microsoft'?a.canWrite:a.canRead)){
-  $(prefix+'S').innerHTML='<span class=no>Reconnect to allow Google → OneDrive</span>'+(who?' · '+esc(who):'');
-  $(prefix+'Actions').innerHTML=`<a class="btn primary" href="/auth/${provider}">Reconnect</a>`;
-  return;
- }
- $(prefix+'S').innerHTML='<span class=ok>Connected</span>'+(who?' · <span title="'+esc(who)+'">'+esc(who)+'</span>':'');
- $(prefix+'Actions').innerHTML=`<a class="btn" href="/auth/${provider}" title="Sign in with a different ${label} account">Switch</a><button data-disconnect="${provider}">Disconnect</button>`;
+function toast(message,kind='info'){
+ const el=document.createElement('div');
+ el.className='toast '+kind;
+ el.innerHTML=(kind==='ok'?icon('i-check'):kind==='bad'?icon('i-alert'):'')+'<span>'+esc(message)+'</span>';
+ $('toasts').append(el);
+ setTimeout(()=>el.remove(),kind==='bad'?6000:3500);
 }
-// Accounts are connected and, for Google -> OneDrive, have the extra permissions it needs.
+function askConfirm(message,okLabel){
+ return new Promise(resolve=>{
+  const dlg=$('confirmDlg');$('confirmMsg').textContent=message;$('confirmOk').textContent=okLabel;
+  dlg.onclose=()=>resolve(dlg.returnValue==='ok');
+  dlg.returnValue='';dlg.showModal();
+ });
+}
+
+// Display names and icons for each end of a transfer.
+const DEST={auto:['Google Photos + Drive','i-sparkle'],photos:['Google Photos','logo-gphotos'],drive:['Google Drive','logo-gdrive'],gcs:['Cloud Storage','i-bucket'],onedrive:['OneDrive','logo-onedrive']};
+const SOURCE={gphotos:['Google Photos','logo-gphotos'],gdrive:['Google Drive','logo-gdrive'],takeout:['Takeout export','i-archive'],onedrive:['OneDrive','logo-onedrive']};
+const mark=name=>name.startsWith('logo')?icon(name,'logo'):icon(name);
+function ends(j){
+ if(j.direction==='to_onedrive'){
+  const [label,ic]=SOURCE[j.source]||SOURCE.onedrive;
+  return {from:[ic,j.source==='gphotos'?j.folder_name:`${label} · ${j.folder_name}`],to:['logo-onedrive',j.target_name||'OneDrive']};
+ }
+ const [label,ic]=DEST[j.dest]||[j.dest,'i-folder'];
+ return {from:['logo-onedrive',j.folder_name],to:[ic,j.dest==='gcs'&&j.bucket?`${label} · ${j.bucket}`:label]};
+}
+const routeHtml=j=>{const e=ends(j);return `${mark(e.from[0])}<b>${esc(e.from[1])}</b><svg class="i arrow"><use href="#i-arrow"/></svg>${mark(e.to[0])}<b>${esc(e.to[1])}</b>`};
+function totals(j){
+ const b=j.by,n=k=>(b[k]?.n||0),bytes=k=>(b[k]?.bytes||0);
+ const totBytes=Object.values(b).reduce((a,x)=>a+x.bytes,0), totFiles=Object.values(b).reduce((a,x)=>a+x.n,0);
+ const finishedFiles=n('done')+n('skipped')+n('existing')+n('failed');
+ const completedBytes=bytes('done')+bytes('skipped')+bytes('existing')+bytes('failed');
+ // Photos picker items have no size until copied, so those jobs count files instead of bytes.
+ const bySize=j.source!=='gphotos'&&totBytes>0;
+ const pct=bySize?Math.floor(completedBytes/totBytes*100):totFiles?Math.floor(finishedFiles/totFiles*100):0;
+ return {n,bytes,totBytes:bySize?totBytes:0,totFiles,completedBytes,pct};
+}
+
+// ---------- Views ----------
+function showView(){
+ const view=location.hash==='#history'?'history':'transfer';
+ $('view-transfer').hidden=view!=='transfer';
+ $('view-history').hidden=view!=='history';
+ document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
+ if(view==='history')renderHistory(true);
+}
+addEventListener('hashchange',showView);
+
+// ---------- Theme, drawer ----------
+function setTheme(t){document.documentElement.setAttribute('data-theme',t);store.set('theme',t);$('themeBtn').innerHTML=icon(t==='dark'?'i-sun':'i-moon')}
+$('themeBtn').onclick=()=>setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
+function openDrawer(kind){
+ $('drawerTitle').textContent=kind==='settings'?'Settings':'Help';
+ $('settingsForm').hidden=kind!=='settings';$('helpContent').hidden=kind!=='help';
+ $('drawer').hidden=false;$('scrim').hidden=false;$('drawerClose').focus();
+}
+function closeDrawer(){$('drawer').hidden=true;$('scrim').hidden=true}
+$('settingsBtn').onclick=()=>{loadSettings();openDrawer('settings')};
+$('helpBtn').onclick=()=>openDrawer('help');
+$('drawerClose').onclick=closeDrawer;$('scrim').onclick=closeDrawer;
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('drawer').hidden)closeDrawer()});
+
+// ---------- Accounts ----------
 function accountsReady(){
  const s=accounts;
  if(!(s.microsoft&&s.google&&!s.microsoftAccount?.problem&&!s.googleAccount?.problem))return false;
  return !reverse()||(s.microsoftAccount.canWrite&&s.googleAccount.canRead);
 }
+function accountRow(provider,a,configured){
+ const name=provider==='microsoft'?'Microsoft OneDrive':'Google',logo=provider==='microsoft'?'logo-onedrive':'logo-gphotos';
+ const who=a?.account?(a.account.email||a.account.name):'';
+ let pill,text,actions;
+ if(!a?.connected){
+  pill='<span class="pill">Not connected</span>';text=configured?'Sign in to continue.':'Add its app keys to .env first.';
+  actions=`<a class="btn primary" href="/auth/${provider}">Connect</a>`;
+ }else if(a.problem){
+  pill='<span class="pill bad">Sign-in expired</span>';text=a.problem;
+  actions=`<a class="btn primary" href="/auth/${provider}">Reconnect</a>`;
+ }else if(reverse()&&!(provider==='microsoft'?a.canWrite:a.canRead)){
+  pill='<span class="pill warn">Needs permission</span>';text=(who?who+' · ':'')+'Reconnect to allow Google → OneDrive.';
+  actions=`<a class="btn primary" href="/auth/${provider}">Reconnect</a>`;
+ }else{
+  pill='<span class="pill ok">Connected</span>';text=who;
+  actions=`<a class="btn ghost" href="/auth/${provider}" title="Sign in with a different account">Switch</a><button class="btn ghost danger" type="button" data-disconnect="${provider}">Disconnect</button>`;
+ }
+ return `<div class="account">${icon(logo,'logo')}<div class="account-text"><b>${name} ${pill}</b><span title="${esc(text)}">${esc(text)}</span></div><div class="actions">${actions}</div></div>`;
+}
 async function status(){
- const s=await api('/api/status');accounts=s;
- renderAccount('ms','microsoft',s.microsoftAccount,s.microsoftConfigured);
- renderAccount('g','google',s.googleAccount,s.googleConfigured);
- const ready=accountsReady();
- setStep('step1',ready,'1');
- $('readyBadge').className='badge '+(ready?'ok':'no');
- $('readyBadge').textContent=ready?'Accounts connected':'Connect accounts to start';
- updateStart();
+ try{accounts=await api('/api/status')}catch(e){return}
+ $('accountList').innerHTML=accountRow('microsoft',accounts.microsoftAccount,accounts.microsoftConfigured)+accountRow('google',accounts.googleAccount,accounts.googleConfigured);
+ renderSteps();
 }
 document.addEventListener('click',async e=>{
- const provider=e.target.dataset?.disconnect;
- if(!provider)return;
- const label=provider==='microsoft'?'Microsoft':'Google';
- if(!confirm(`Disconnect ${label}? You can connect again at any time.`))return;
- try{await post(`/api/accounts/${provider}/disconnect`);await status();if(provider==='microsoft')browse()}catch(err){alert(err.message)}
+ const btn=e.target.closest('[data-disconnect]');
+ if(!btn)return;
+ const provider=btn.dataset.disconnect,label=provider==='microsoft'?'Microsoft':'Google';
+ if(!await askConfirm(`Disconnect ${label}? You can connect again at any time.`,'Disconnect'))return;
+ try{await post(`/api/accounts/${provider}/disconnect`);toast(`${label} disconnected`,'ok');await status();if(provider==='microsoft')browse()}catch(err){toast(err.message,'bad')}
 });
 
+// ---------- OneDrive folder browser ----------
 function renderFolders(){
  const cur=stack[stack.length-1], q=$('folderFilter').value.trim().toLowerCase();
- const ul=$('list');ul.innerHTML='';
- if(stack.length>1){
-  const li=document.createElement('li');li.className='folder-action-item';li.innerHTML='<a>⬆ Back to parent folder</a>';
-  li.onclick=()=>{stack.pop();$('folderFilter').value='';browse()};ul.append(li);
- }
- // The OneDrive top level can be a destination, but is too broad to copy from.
- if(cur.id!=='root'||reverse()){
-  const li=document.createElement('li');li.className='folder-action-item';
-  const isSel=selected&&selected.id===cur.id;
-  li.innerHTML=`<button class="${isSel?'':'primary'}" style="width:100%">${isSel?'✓ Selected':reverse()?'Copy into this folder':'Select this folder'}</button>`;
-  li.querySelector('button').onclick=()=>{selected={id:cur.id,name:cur.name,path:stack.map(s=>s.name).join('/')};$('sel').textContent=selected.path;setStep('step2',true,'2');updateStart();renderFolders()};
-  ul.append(li);
- }
+ $('crumbs').innerHTML=stack.map((s,i)=>`${i?icon('i-chevron'):''}<button type="button" data-crumb="${i}">${esc(s.name)}</button>`).join('');
  const folders=folderItems.filter(i=>i.isFolder&&(!q||i.name.toLowerCase().includes(q)));
- folders.forEach(i=>{
-  const li=document.createElement('li');li.innerHTML='<a>📁 '+esc(i.name)+'</a>';
-  li.onclick=()=>{stack.push({id:i.id,name:i.name});$('folderFilter').value='';browse()};ul.append(li);
- });
- if(q&&!folders.length){const li=document.createElement('li');li.className='small folder-action-item';li.textContent=`No folders match "${q}".`;ul.append(li)}
- const nf=folderItems.filter(i=>!i.isFolder).length;
- if(nf){const li=document.createElement('li');li.className='small folder-action-item';li.textContent=num(nf)+' file(s) in this folder';ul.append(li)}
+ const files=folderItems.filter(i=>!i.isFolder).length;
+ $('list').innerHTML=folders.map(f=>`<li><button class="folder" type="button" data-open="${esc(f.id)}" data-name="${esc(f.name)}">${icon('i-folder')}<span>${esc(f.name)}</span></button></li>`).join('')
+  +(q&&!folders.length?`<li class="grid-note">No folders match “${esc(q)}”.</li>`:'')
+  +(!q&&!folders.length&&!files?`<li class="grid-note">${foldersLoaded?'This folder is empty.':'Loading…'}</li>`:'')
+  +(files?`<li class="grid-note">${num(files)} file(s) in this folder</li>`:'');
+ const isSel=selected&&selected.id===cur.id, atRoot=cur.id==='root';
+ // The OneDrive top level can be a destination, but is too broad to copy from.
+ const btn=$('selectFolder');
+ btn.disabled=atRoot&&!reverse();
+ btn.innerHTML=isSel?icon('i-check')+'Selected':btn.disabled?'Open a folder to copy':reverse()?`Copy into “${esc(cur.name)}”`:`Copy “${esc(cur.name)}”`;
+ $('browserHint').textContent=atRoot&&!reverse()?'Open the folder you want to copy.':isSel?'This folder is selected.':'Open a folder, or use this one.';
 }
 async function browse(){
  const cur=stack[stack.length-1];
- $('crumb').textContent=stack.map(s=>s.name).join(' / ');
- $('list').innerHTML='<li class="small folder-action-item">Loading…</li>';
- try{folderItems=await api('/api/ms/children?id='+encodeURIComponent(cur.id));renderFolders()}
- catch(e){folderItems=[];$('list').innerHTML='<li class="no folder-action-item">'+esc(e.message)+' (connect Microsoft first)</li>'}
+ $('list').innerHTML='<li class="grid-note">Loading…</li>';
+ try{folderItems=await api('/api/ms/children?id='+encodeURIComponent(cur.id));foldersLoaded=true}
+ catch(e){folderItems=[];$('list').innerHTML=`<li class="grid-note">${esc(e.message)}. Connect Microsoft in step 1.</li>`;return}
+ renderFolders();
 }
+$('crumbs').onclick=e=>{const b=e.target.closest('[data-crumb]');if(!b)return;stack=stack.slice(0,Number(b.dataset.crumb)+1);$('folderFilter').value='';browse()};
+$('list').onclick=e=>{const b=e.target.closest('[data-open]');if(!b)return;stack.push({id:b.dataset.open,name:b.dataset.name});$('folderFilter').value='';browse()};
 $('folderFilter').oninput=renderFolders;
+$('selectFolder').onclick=()=>{
+ const cur=stack[stack.length-1];
+ selected={id:cur.id,name:cur.name,path:stack.map(s=>s.name).join('/')};
+ // Going to Google, "Automatic" is preselected, so show step 3 rather than skipping past it.
+ renderFolders();openStep=reverse()?null:'to';renderSteps();
+};
 
-// The chosen Google source as { id, name }, or null.
-function sourceChoice(){
- const s=$('source').value;
- if(s==='gphotos')return srcSel.gphotos?.count?srcSel.gphotos:null;
- return srcSel[s];
+// ---------- Google sources (Google -> OneDrive) ----------
+function setSource(s){
+ source=s;
+ document.querySelectorAll('#gSource [data-src]').forEach(b=>b.setAttribute('aria-selected',b.dataset.src===s));
+ $('srcPhotos').hidden=s!=='gphotos';$('srcDrive').hidden=s!=='gdrive';$('srcTakeout').hidden=s!=='takeout';
+ if(s==='gdrive'&&!$('gList').children.length)gBrowse();
+ renderSteps();
 }
-function updateStart(){
- const connected=accounts.microsoft&&accounts.google;
- if(reverse()){
-  const src=sourceChoice();
-  const srcHint={gphotos:'Choose photos and videos in Google Photos.',gdrive:'Pick a Google Drive folder.',takeout:'Enter your Takeout folder and press Check folder.'}[$('source').value];
-  $('go').disabled=!(accountsReady()&&selected&&src);
-  $('goHint').textContent=!connected?'Connect both accounts in step 1.':!accountsReady()?'Reconnect Microsoft and Google in step 1 to allow copying to OneDrive.':!selected?'Choose the OneDrive folder to copy into in step 2.':!src?srcHint:`Ready to copy ${src.name} into "${selected.path}".`;
-  return;
- }
- const gcsOk=$('dest').value!=='gcs'||$('bucket').value.trim();
- $('go').disabled=!(connected&&selected&&gcsOk);
- $('goHint').textContent=!connected?'Connect both accounts in step 1.':!selected?'Choose a folder in step 2.':!gcsOk?'Enter the Cloud Storage bucket name.':`Ready to copy "${selected.path}".`;
-}
+document.querySelectorAll('#gSource [data-src]').forEach(b=>b.onclick=()=>setSource(b.dataset.src));
+const sourceChoice=()=>source==='gphotos'?(srcSel.gphotos?.count?srcSel.gphotos:null):srcSel[source];
 
-function setDirection(d){
- dir=d;store.set('direction',d);
- document.querySelectorAll('.direction-switch button').forEach(b=>b.classList.toggle('active',b.dataset.dir===d));
- $('pageTitle').textContent=reverse()?'Google to OneDrive':'OneDrive to Google';
- $('folderTitle').textContent=reverse()?'Choose OneDrive destination folder':'Choose OneDrive folder';
- $('folderSub').innerHTML=reverse()?'Open a folder, then press <b>Copy into this folder</b>.':'Open a folder, then press <b>Select this folder</b>.';
- $('step3Title').textContent=reverse()?'Choose what to copy and start':'Choose destination and start';
- $('step3Sub').textContent=reverse()?'A folder named after the source is created inside your OneDrive folder.':'Subfolders become Drive folders, Photos albums, or bucket paths.';
- $('fwdOptions').style.display=reverse()?'none':'';
- $('revOptions').style.display=reverse()?'':'none';
- // The OneDrive folder means something different in each direction, so start over.
- selected=null;$('sel').textContent='none';setStep('step2',false,'2');
- showSource();
- if(accounts.microsoftAccount)status();
- renderFolders();updateStart();
-}
-document.querySelectorAll('.direction-switch button').forEach(b=>b.onclick=()=>setDirection(b.dataset.dir));
-
-function showSource(){
- const s=$('source').value;
- $('srcPhotos').style.display=s==='gphotos'?'':'none';
- $('srcDrive').style.display=s==='gdrive'?'':'none';
- $('srcTakeout').style.display=s==='takeout'?'':'none';
- $('mergeRow').style.display=!reverse()||s==='takeout'?'':'none';
- if(reverse()&&s==='gdrive'&&!$('gList').children.length)gBrowse();
- updateStart();
-}
-$('source').onchange=showSource;
-
-// Google Photos picker: Google's own window, polled until the user presses Done.
 $('pickPhotos').onclick=async()=>{
  const token=++pickToken;
  const win=window.open('about:blank','gphotos-picker','width=1100,height=800'); // opened now so popup blockers allow it
- srcSel.gphotos=null;updateStart();
+ srcSel.gphotos=null;renderSteps();
  try{
   const s=await post('/api/picker/sessions');
   if(win){win.location=s.pickerUri;$('pickStatus').textContent='Waiting for you to press Done in the Google Photos window…'}
@@ -832,182 +724,238 @@ $('pickPhotos').onclick=async()=>{
    if(!r.ready)continue;
    if(token!==pickToken)return;
    srcSel.gphotos={id:s.id,name:`Google Photos ${new Date().toISOString().slice(0,10)}`,count:r.count};
-   $('pickStatus').textContent=r.count?`${num(r.count)} item(s) selected${r.videos?` (${num(r.videos)} videos)`:''}. Press Choose again to change the selection.`:'Nothing was selected. Press Choose to try again.';
-   updateStart();return;
+   $('pickStatus').textContent=r.count?`${num(r.count)} item(s) selected${r.videos?`, including ${num(r.videos)} video(s)`:''}. Press Choose again to change.`:'Nothing was selected. Press Choose to try again.';
+   if(r.count)toast(`${num(r.count)} item(s) selected`,'ok');
+   openStep=null;renderSteps();return;
   }
   if(token===pickToken)$('pickStatus').textContent='Timed out waiting for Google Photos. Press Choose to try again.';
- }catch(e){if(win)win.close();$('pickStatus').textContent=e.message}
+ }catch(e){if(win)win.close();$('pickStatus').textContent='';toast(e.message,'bad')}
 };
 
-// Google Drive folder browser.
 async function gBrowse(){
- const cur=gStack[gStack.length-1], ul=$('gList');
- $('gCrumb').textContent=gStack.map(s=>s.name).join(' / ');
- ul.innerHTML='<li class="small folder-action-item">Loading…</li>';
+ const cur=gStack[gStack.length-1];
+ $('gCrumbs').innerHTML=gStack.map((s,i)=>`${i?icon('i-chevron'):''}<button type="button" data-gcrumb="${i}">${esc(s.name)}</button>`).join('');
+ $('gList').innerHTML='<li class="grid-note">Loading…</li>';
  let items;
  try{items=await api('/api/gdrive/children?id='+encodeURIComponent(cur.id))}
- catch(e){ul.innerHTML='<li class="no folder-action-item">'+esc(e.message)+'</li>';return}
- ul.innerHTML='';
- if(gStack.length>1){const li=document.createElement('li');li.className='folder-action-item';li.innerHTML='<a>⬆ Back</a>';li.onclick=()=>{gStack.pop();gBrowse()};ul.append(li)}
+ catch(e){$('gList').innerHTML=`<li class="grid-note">${esc(e.message)}</li>`;return}
+ const folders=items.filter(i=>i.isFolder), files=items.length-folders.length;
+ $('gList').innerHTML=folders.map(f=>`<li><button class="folder" type="button" data-gopen="${esc(f.id)}" data-name="${esc(f.name)}">${icon('i-folder')}<span>${esc(f.name)}</span></button></li>`).join('')
+  +(files?`<li class="grid-note">${num(files)} file(s) in this folder</li>`:'')+(!items.length?'<li class="grid-note">This folder is empty.</li>':'');
  const isSel=srcSel.gdrive?.id===cur.id;
- const pick=document.createElement('li');pick.className='folder-action-item';
- pick.innerHTML=`<button type="button" class="${isSel?'':'primary'}" style="width:100%">${isSel?'✓ Selected':'Copy this folder'}</button>`;
- pick.querySelector('button').onclick=()=>{srcSel.gdrive={id:cur.id,name:cur.name,path:gStack.map(s=>s.name).join('/')};$('gSel').textContent=srcSel.gdrive.path;updateStart();gBrowse()};
- ul.append(pick);
- items.filter(i=>i.isFolder).forEach(i=>{const li=document.createElement('li');li.innerHTML='<a>📁 '+esc(i.name)+'</a>';li.onclick=()=>{gStack.push({id:i.id,name:i.name});gBrowse()};ul.append(li)});
- const nf=items.filter(i=>!i.isFolder).length;
- if(nf){const li=document.createElement('li');li.className='small folder-action-item';li.textContent=num(nf)+' file(s) in this folder';ul.append(li)}
+ $('gSelect').innerHTML=isSel?icon('i-check')+'Selected':`Copy “${esc(cur.name)}”`;
 }
+$('gCrumbs').onclick=e=>{const b=e.target.closest('[data-gcrumb]');if(!b)return;gStack=gStack.slice(0,Number(b.dataset.gcrumb)+1);gBrowse()};
+$('gList').onclick=e=>{const b=e.target.closest('[data-gopen]');if(!b)return;gStack.push({id:b.dataset.gopen,name:b.dataset.name});gBrowse()};
+$('gSelect').onclick=()=>{const cur=gStack[gStack.length-1];srcSel.gdrive={id:cur.id,name:cur.name,path:gStack.map(s=>s.name).join('/')};gBrowse();openStep=null;renderSteps()};
 
-// Google Takeout folder on this computer.
-$('takeoutPath').oninput=()=>{srcSel.takeout=null;updateStart()};
+$('takeoutPath').oninput=()=>{srcSel.takeout=null;$('takeoutStatus').textContent='';renderSteps()};
 $('takeoutCheck').onclick=async()=>{
  const p=$('takeoutPath').value.trim();
  if(!p)return;
  $('takeoutStatus').textContent='Checking…';
  try{
   const s=await api('/api/takeout/check?path='+encodeURIComponent(p));
-  srcSel.takeout={id:p,name:p.split(/[\\/]/).filter(Boolean).pop()||'Takeout'};
-  $('takeoutStatus').innerHTML=`${num(s.files)} files (${fmt(s.bytes)}): ${num(s.media)} photos/videos and ${num(s.sidecars)} metadata files.`+(s.archives?` <span class=no>${num(s.archives)} archive(s) found. Extract them first, or they are copied as .zip files.</span>`:'');
- }catch(e){srcSel.takeout=null;$('takeoutStatus').innerHTML='<span class=no>'+esc(e.message)+'</span>'}
- updateStart();
-};
-$('dest').onchange=()=>{$('bucket').style.display=$('dest').value==='gcs'?'':'none';$('fallbackRow').style.display=$('dest').value==='photos'?'':'none';updateStart()};
-$('bucket').oninput=updateStart;
-$('go').onclick=async()=>{
- if(!selected)return;
- $('go').disabled=true;
- if(reverse()){
-  const src=sourceChoice();
-  try{await post('/api/jobs',{direction:'to_onedrive',source:$('source').value,sourceId:src.id,sourceName:src.name,targetId:selected.id,targetName:selected.path,merge:$('mergeMetadata').checked,skipExisting:$('skipExisting').checked});await refresh();location.hash='transfer-activity'}
-  catch(e){alert(e.message)}
-  finally{updateStart()}
-  return;
- }
- try{await post('/api/jobs',{folderId:selected.id,folderName:selected.name,dest:$('dest').value,bucket:$('bucket').value.trim(),merge:$('mergeMetadata').checked,skipExisting:$('skipExisting').checked,fallback:$('dest').value==='photos'&&$('fallback').checked});await refresh();location.hash='transfer-activity'}
- catch(e){alert(e.message)}
- finally{updateStart()}
+  srcSel.takeout={id:p,name:p.split(/[\\/]/).filter(Boolean).pop()||'Takeout',files:s.files};
+  $('takeoutStatus').innerHTML=`Found ${num(s.files)} files (${fmt(s.bytes)}): ${num(s.media)} photos/videos and ${num(s.sidecars)} metadata files.`+(s.archives?` <b style="color:var(--warn)">${num(s.archives)} .zip file(s) still need extracting, or they are copied as they are.</b>`:'');
+  if(s.sidecars&&!$('mergeMetadata').disabled)$('mergeMetadata').checked=true;
+  openStep=null;
+ }catch(e){srcSel.takeout=null;$('takeoutStatus').innerHTML=`<span style="color:var(--bad)">${esc(e.message)}</span>`}
+ renderSteps();
 };
 
-async function loadSettings(){const s=await api('/api/settings');$('setConcurrency').value=s.concurrency;$('setSpeed').value=s.speedLimitMBps}
+// ---------- Google destination (OneDrive -> Google) ----------
+const destValue=()=>document.querySelector('input[name=dest]:checked').value;
+document.querySelectorAll('input[name=dest]').forEach(r=>r.onchange=()=>{$('bucket').hidden=destValue()!=='gcs';if(destValue()==='gcs')$('bucket').focus();renderSteps()});
+$('bucket').oninput=renderSteps;
+$('destContinue').onclick=()=>{if(destValue()==='gcs'&&!$('bucket').value.trim()){$('bucket').focus();return toast('Enter the bucket name first','bad')}openStep=null;renderSteps()};
+
+// ---------- Steps ----------
+function setDirection(d){
+ dir=d;store.set('direction',d);
+ document.querySelectorAll('.dir-tile').forEach(t=>t.setAttribute('aria-checked',t.dataset.dir===d));
+ $('heroTitle').textContent=reverse()?'Bring your Google files to OneDrive':'Move your OneDrive files to Google';
+ // Step 2 is the source and step 3 the destination; OneDrive is one or the other.
+ $('fromBody').append(reverse()?$('gSource'):$('odBrowser'));
+ $('toBody').append(reverse()?$('odBrowser'):$('gDest'));
+ $('parts').append(reverse()?$('gDest'):$('gSource'));
+ selected=null;openStep=null;stack=[{id:'root',name:'OneDrive'}];$('folderFilter').value='';
+ if(accounts.microsoft)browse();else renderFolders();
+ status();renderSteps();
+}
+document.querySelectorAll('.dir-tile').forEach(t=>t.onclick=()=>{if(t.dataset.dir!==dir)setDirection(t.dataset.dir)});
+
+function sourceSummary(){
+ const s=sourceChoice();
+ if(!s)return null;
+ if(source==='gphotos')return `Google Photos · ${num(s.count)} item(s)`;
+ if(source==='gdrive')return `Google Drive · ${s.path}`;
+ return `Takeout export · ${s.name}${s.files?` (${num(s.files)} files)`:''}`;
+}
+function stepState(){
+ let from,to;
+ if(reverse()){from=sourceSummary();to=selected?selected.path:null}
+ else{
+  from=selected?selected.path:null;
+  const d=destValue(),bucket=$('bucket').value.trim();
+  to=d==='gcs'?(bucket?`Cloud Storage · ${bucket}`:null):DEST[d][0];
+ }
+ return {connect:accountsReady(),from,to};
+}
+function renderSteps(){
+ const st=stepState(), done={connect:st.connect,from:!!st.from,to:!!st.to,start:false};
+ const order=['connect','from','to','start'];
+ const open=openStep||order.find(k=>!done[k]);
+ for(const k of order){
+  const el=$('step-'+k);
+  el.classList.toggle('done',done[k]);el.classList.toggle('open',k===open);
+  el.querySelector('.step-head').setAttribute('aria-expanded',k===open);
+ }
+ const s=accounts;
+ $('sum-connect').textContent=st.connect?`OneDrive · ${s.microsoftAccount?.account?.email||'connected'}   ·   Google · ${s.googleAccount?.account?.email||'connected'}`
+  :s.microsoft&&s.google?'Reconnect to give CloudLift the permissions this direction needs':'Sign in to Microsoft and Google';
+ $('sum-from').textContent=st.from||(reverse()?'Google Photos, a Drive folder, or a Takeout export':'A folder in your OneDrive');
+ $('sum-to').textContent=st.to||(reverse()?'A folder in your OneDrive':'Google Photos, Drive or Cloud Storage');
+ $('revFrom').textContent=st.from||'Not chosen yet';
+ $('revTo').textContent=st.to||'Not chosen yet';
+ $('fallbackRow').hidden=reverse()||destValue()!=='photos';
+ $('mergeRow').hidden=reverse()&&source!=='takeout';
+ const ready=st.connect&&st.from&&st.to;
+ $('go').disabled=!ready;
+ const hint=!st.connect?'Connect your accounts in step 1.':!st.from?'Choose what to copy in step 2.':!st.to?'Choose where it goes in step 3.':'Everything is ready.';
+ $('goHint').textContent=hint;
+ $('sum-start').textContent=ready?'Ready to start':hint;
+}
+document.querySelectorAll('.step-head').forEach(h=>h.onclick=()=>{
+ const k=h.dataset.step, isOpen=$('step-'+k).classList.contains('open');
+ openStep=isOpen?'none':k;renderSteps();
+});
+
+$('go').onclick=async()=>{
+ $('go').disabled=true;
+ try{
+  if(reverse()){
+   const src=sourceChoice();
+   await post('/api/jobs',{direction:'to_onedrive',source,sourceId:src.id,sourceName:src.name,targetId:selected.id,targetName:selected.path,merge:$('mergeMetadata').checked,skipExisting:$('skipExisting').checked});
+  }else{
+   await post('/api/jobs',{folderId:selected.id,folderName:selected.name,dest:destValue(),bucket:$('bucket').value.trim(),merge:$('mergeMetadata').checked,skipExisting:$('skipExisting').checked,fallback:destValue()==='photos'&&$('fallback').checked});
+  }
+  toast('Transfer started','ok');
+  openStep='none';
+  await refresh();
+  scrollTo({top:0,behavior:'smooth'});
+ }catch(e){toast(e.message,'bad')}
+ finally{renderSteps()}
+};
+
+// ---------- Settings, ExifTool ----------
+async function loadSettings(){try{const s=await api('/api/settings');$('setConcurrency').value=s.concurrency;$('setSpeed').value=s.speedLimitMBps}catch{}}
 $('settingsForm').onsubmit=async e=>{
  e.preventDefault();
- try{await send('PUT','/api/settings',{concurrency:Number($('setConcurrency').value),speedLimitMBps:Number($('setSpeed').value)});$('settingsNote').textContent='Saved.';setTimeout(()=>$('settingsNote').textContent='',2500)}
- catch(err){$('settingsNote').textContent=err.message}
+ try{await send('PUT','/api/settings',{concurrency:Number($('setConcurrency').value),speedLimitMBps:Number($('setSpeed').value)});toast('Settings saved','ok');closeDrawer()}
+ catch(err){toast(err.message,'bad')}
 };
-
-async function act(id,a){try{await post(`/api/jobs/${id}/${a}`);await refresh()}catch(e){alert(e.message)}}
-$('skippedToDrive').onclick=()=>latestJob&&act(latestJob.id,'skipped-to-drive');
-
-function totals(j){
- const b=j.by,n=k=>(b[k]?.n||0),bytes=k=>(b[k]?.bytes||0);
- const totBytes=Object.values(b).reduce((a,x)=>a+x.bytes,0);
- const completedBytes=bytes('done')+bytes('skipped')+bytes('existing')+bytes('failed');
- return {n,bytes,totBytes,completedBytes,pct:totBytes?Math.floor(completedBytes/totBytes*100):0};
+async function exiftoolStatus(){
+ try{const s=await api('/api/exiftool');$('mergeMetadata').disabled=!s.ok;$('exiftoolStatus').textContent=s.ok?`Writes the dates and locations from Takeout's .json files into each photo (ExifTool ${s.version}).`:'Needs ExifTool: install it and set EXIFTOOL_PATH in .env.'}
+ catch{$('exiftoolStatus').textContent='Needs ExifTool: install it and set EXIFTOOL_PATH in .env.'}
 }
-function jobNote(j){
- if(j.active)return j.current?'<div class="current-file">Currently transferring: <b>'+esc(j.current.dir+'/'+j.current.name)+'</b></div>':'<div class="job-note">'+(j.status==='scanning'?'Scanning OneDrive folders…':'Looking for the next file…')+'</div>';
- if(j.error)return '<pre>'+esc(j.error)+'</pre>';
- return '';
+
+// ---------- Jobs: live panel, banner, history ----------
+async function act(id,a){
+ const done={pause:'Paused',resume:'Resumed',retry:'Retrying failed files','skipped-to-drive':'Sending skipped files to Google Drive'};
+ try{await post(`/api/jobs/${id}/${a}`);toast(done[a]||'Done','ok');await refresh()}catch(e){toast(e.message,'bad')}
 }
-function jobActions(j,t){
- const resumable=['paused','error','scanning','running'].includes(j.status);
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b)act(Number(b.dataset.job),b.dataset.act)});
+function jobActions(j,t,withDetails){
+ const resumable=['paused','error','scanning','running'].includes(j.status), fwd=j.direction!=='to_onedrive';
  return [
-  j.active?`<button onclick="act(${j.id},'pause')">Pause</button>`:'',
-  !j.active&&resumable?`<button class="primary" onclick="act(${j.id},'resume')">Resume</button>`:'',
-  !j.active&&t.n('failed')?`<button onclick="act(${j.id},'retry')">Retry failed (${num(t.n('failed'))})</button>`:'',
-  !j.active&&t.n('skipped')&&j.direction!=='to_onedrive'?`<button onclick="act(${j.id},'skipped-to-drive')">Send skipped to Drive</button>`:'',
-  t.n('skipped')&&j.direction!=='to_onedrive'?`<a class="download-link" target="_blank" rel="noopener" href="/skipped.html?job=${j.id}">Download skipped files</a>`:'',
+  j.active?`<button class="btn" type="button" data-act="pause" data-job="${j.id}">${icon('i-pause')}Pause</button>`:'',
+  !j.active&&resumable?`<button class="btn primary" type="button" data-act="resume" data-job="${j.id}">${icon('i-play')}Resume</button>`:'',
+  !j.active&&t.n('failed')?`<button class="btn" type="button" data-act="retry" data-job="${j.id}">${icon('i-retry')}Retry ${num(t.n('failed'))} failed</button>`:'',
+  !j.active&&t.n('skipped')&&fwd?`<button class="btn" type="button" data-act="skipped-to-drive" data-job="${j.id}">${icon('logo-gdrive','logo')}Send skipped to Drive</button>`:'',
+  t.n('skipped')&&fwd?`<a class="btn ghost" target="_blank" rel="noopener" href="/skipped.html?job=${j.id}">${icon('i-download')}Skipped files</a>`:'',
+  withDetails?`<a class="btn ghost" href="#history">Details</a>`:'',
  ].join('');
 }
 
-async function refresh(){
- const jobs=await api('/api/jobs');
- const j=latestJob=jobs[0];
- if(j){
-  const t=totals(j);
-  $('statDone').textContent=num(t.n('done'));
-  $('statDoneBytes').textContent=`${fmt(t.bytes('done'))} copied`+(t.n('existing')?` · ${num(t.n('existing'))} already copied before`:'');
-  $('statPending').textContent=num(t.n('pending')+t.n('active'));
-  $('statPendingBytes').textContent=`${fmt(t.bytes('pending')+t.bytes('active'))} waiting`;
-  if(j.active){
-   $('statSpeedLabel').textContent='Speed';$('statSpeed').textContent=fmtRate(j.bytesPerSecond);$('statSpeedSub').textContent='Over the last 30 seconds';
-   $('statEta').textContent=j.status==='scanning'?'scanning…':duration(j.etaSeconds);
-  }else{
-   $('statSpeedLabel').textContent='Average speed';$('statSpeed').textContent=j.avgBytesPerSecond?fmtRate(j.avgBytesPerSecond):'—';$('statSpeedSub').textContent=`Job #${j.id} overall`;
-   $('statEta').textContent=j.status==='done'||j.status==='done_with_errors'?'complete':statusText(j.status);
-  }
-  $('overallProgressBar').value=t.completedBytes;
-  $('overallProgressBar').max=t.totBytes||1;
-  $('overallPct').textContent=t.pct+'%';
-  $('overallBytes').textContent=`${fmt(t.completedBytes)} / ${fmt(t.totBytes)}`;
-  $('overallBadge').className='badge '+(statusClass(j.status)?'no':'ok');
-  $('overallBadge').textContent=statusText(j.status);
-  $('overallNote').textContent=j.active&&j.current?`Transferring: ${j.current.name}`:j.status==='paused'&&j.error?j.error:`Job #${j.id}: ${route(j)} · ${statusText(j.status)}`;
-
-  const numSkipped=t.n('skipped');
-  $('skippedBadge').textContent=num(numSkipped)+' files';
-  $('skippedBadge').className='badge '+(numSkipped?'no':'ok');
-  $('skippedMsg').textContent=numSkipped?`${num(numSkipped)} file(s) in job #${j.id} were skipped: ${j.skippedFiles?.[0]?.error||'not supported by the destination'}.`:'No files skipped.';
-  $('skippedSummaryText').textContent=`Show skipped file names (${num(numSkipped)})`;
-  $('skippedList').innerHTML=j.skippedFiles?.length?j.skippedFiles.map(f=>'<li>'+esc(f.dir+'/'+f.name)+'</li>').join(''):'<li style="color:var(--muted);list-style:none">None</li>';
-  $('skippedActions').style.display=numSkipped?'':'none';
-  // Sending to Drive and downloading from OneDrive only apply to OneDrive -> Google jobs.
-  const fwd=j.direction!=='to_onedrive';
-  $('skippedToDrive').style.display=j.active||!fwd?'none':'';
-  $('skippedDownloadLink').style.display=fwd?'':'none';
-  $('skippedDownloadLink').href=`/skipped.html?job=${j.id}`;
- }else{
-  $('statDone').textContent='0';$('statDoneBytes').textContent='0 MB copied';
-  $('statPending').textContent='0';$('statPendingBytes').textContent='0 MB waiting';
-  $('statSpeedLabel').textContent='Speed';$('statSpeed').textContent='—';$('statSpeedSub').textContent='No transfer running';
-  $('statEta').textContent='—';
-  $('overallProgressBar').value=0;$('overallPct').textContent='0%';$('overallBytes').textContent='0 MB / 0 MB';
-  $('overallBadge').className='badge';$('overallBadge').textContent='Idle';$('overallNote').textContent='No transfer running';
-  $('skippedBadge').textContent='0 files';$('skippedMsg').textContent='No files skipped so far.';
-  $('skippedList').innerHTML='<li style="color:var(--muted);list-style:none">None</li>';
-  $('skippedActions').style.display='none';
- }
-
- $('recentJobsList').innerHTML=jobs.map(job=>`<div class="recent-job-item">
-   <div>
-     <b>Job #${job.id}: ${esc(route(job))}</b>
-     <p class="small">${esc(job.created_at||'')}</p>
-   </div>
-   <span class="job-status ${statusClass(job.status)}">${esc(statusText(job.status))}</span>
- </div>`).join('')||'<p class="small">No jobs yet.</p>';
-
- $('jobs').innerHTML=jobs.map(j=>{
-  const t=totals(j);
-  return `<article class="job">
-    <div class="job-top">
-      <div>
-        <div class="job-title">${esc(route(j))}</div>
-        <div class="job-meta">Job #${j.id} · Started ${esc(j.created_at||'')} · ${num(t.n('done'))} copied${t.n('existing')?' · '+num(t.n('existing'))+' already copied before':''}${t.n('skipped')?' · '+num(t.n('skipped'))+' skipped':''}${t.n('failed')?' · '+num(t.n('failed'))+' failed':''}</div>
-      </div>
-      <span class="job-status ${statusClass(j.status)}">${esc(statusText(j.status))}</span>
-    </div>
-    <progress value="${t.completedBytes}" max="${t.totBytes||1}"></progress>
-    <div class="job-progress-meta">
-      <span>${t.pct}% done (${fmt(t.bytes('done'))} copied)</span>
-      <span>${j.active?fmtRate(j.bytesPerSecond):j.avgBytesPerSecond?'avg '+fmtRate(j.avgBytesPerSecond):''}</span>
-    </div>
-    ${jobNote(j)}
-    ${j.failed?.length?'<pre>'+j.failed.map(f=>esc(f.dir+'/'+f.name+': '+f.error)).join('\n')+'</pre>':''}
-    <div class="job-actions">${jobActions(j,t)}</div>
-  </article>`;
- }).join('')||'<p class="small">No transfers yet. Start one in step 3.</p>';
+function renderLive(j){
+ const show=j&&(j.active||['paused','error','scanning','running'].includes(j.status));
+ $('livePanel').hidden=!show;
+ if(!show)return;
+ const t=totals(j), kind=statusKind(j.status,j.active);
+ $('livePanel').className='card live'+(kind==='warn'?' paused':kind==='bad'?' bad':'');
+ $('ringBar').style.strokeDashoffset=351.86*(1-t.pct/100);
+ $('livePct').textContent=t.pct+'%';
+ $('liveBytes').textContent=t.totBytes?`of ${fmt(t.totBytes)}`:`of ${num(t.totFiles)} files`;
+ $('liveRoute').innerHTML=routeHtml(j);
+ $('livePill').className='pill '+kind;$('livePill').textContent=statusText(j.status);
+ $('liveCurrent').textContent=j.active&&j.current?`Copying ${j.current.dir}/${j.current.name}`:j.status==='scanning'?'Looking through your folders…':j.error?j.error:j.active?'Getting the next file…':'Paused. Press Resume to continue.';
+ $('liveCopied').textContent=num(t.n('done'))+' files';
+ $('liveCopiedBytes').textContent=fmt(t.bytes('done'))+(t.n('existing')?` · ${num(t.n('existing'))} already there`:'');
+ $('liveSpeed').textContent=j.active?fmtRate(j.bytesPerSecond):'—';
+ $('liveEta').textContent=j.active?(j.status==='scanning'?'Scanning…':duration(j.etaSeconds)):statusText(j.status);
+ $('liveWaiting').textContent=num(t.n('pending')+t.n('active'))+' files';
+ $('liveWaitingBytes').textContent=t.bytes('pending')+t.bytes('active')?fmt(t.bytes('pending')+t.bytes('active')):'';
+ $('liveActions').innerHTML=jobActions(j,t,true);
+ // Speed sparkline over the last ~80 seconds.
+ if(spark.job!==j.id)spark={job:j.id,values:[]};
+ if(j.active){spark.values.push(j.bytesPerSecond||0);if(spark.values.length>40)spark.values.shift()}
+ const max=Math.max(...spark.values,1);
+ $('sparkLine').setAttribute('points',spark.values.map((v,i)=>`${(i/(Math.max(spark.values.length-1,1)))*120},${21-v/max*19}`).join(' '));
 }
 
-setDirection(store.get('direction')==='to_onedrive'?'to_onedrive':'to_google');
-status().then(browse);refresh();exiftoolStatus();loadSettings();
-setInterval(refresh,2000);setInterval(status,30000);setInterval(exiftoolStatus,30000);
-$('helpBtn').onclick=()=>$('help').showModal();
-document.querySelectorAll('.menu-link').forEach(link=>{link.addEventListener('click',()=>{document.querySelectorAll('.menu-link').forEach(l=>l.classList.remove('active'));link.classList.add('active');});});
-const themeToggle=$('themeToggle');
-function setTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('theme',t);if(themeToggle)themeToggle.textContent=t==='dark'?'🌙':'☼';}
+function renderBanner(j){
+ const finished=j&&!j.active&&(j.status==='done'||j.status==='done_with_errors');
+ const show=finished&&store.get('dismissedJob')!==String(j.id);
+ $('lastBanner').hidden=!show;
+ if(!show)return;
+ const t=totals(j), e=ends(j);
+ $('lastBanner').className='banner'+(j.status==='done'?'':' bad');
+ $('lastBanner').querySelector('.badge-icon').innerHTML=icon(j.status==='done'?'i-check':'i-alert');
+ $('bannerTitle').textContent=j.status==='done'?`Last transfer finished: ${e.from[1]} → ${e.to[1]}`:`Last transfer finished with ${num(t.n('failed'))} failed file(s)`;
+ $('bannerText').textContent=[`${num(t.n('done'))} copied (${fmt(t.bytes('done'))})`,t.n('existing')&&`${num(t.n('existing'))} already there`,t.n('skipped')&&`${num(t.n('skipped'))} skipped`,t.n('failed')&&`${num(t.n('failed'))} failed`].filter(Boolean).join(' · ');
+}
+$('bannerClose').onclick=()=>{if(jobs[0])store.set('dismissedJob',String(jobs[0].id));$('lastBanner').hidden=true};
+
+function jobCard(j){
+ const t=totals(j), kind=statusKind(j.status,j.active), fwd=j.direction!=='to_onedrive';
+ const facts=[[t.n('done'),'copied'],[t.n('existing'),'already there'],[t.n('skipped'),'skipped'],[t.n('failed'),'failed'],[t.n('pending')+t.n('active'),'waiting']]
+  .filter(([n])=>n).map(([n,l])=>`<span><b>${num(n)}</b> ${l}</span>`).join('');
+ const details=[
+  j.failed?.length?`<p class="small" style="margin:10px 0 0">Failed files</p><ul class="file-list">${j.failed.map(f=>`<li class="err">${esc(f.dir+'/'+f.name)}: ${esc(f.error)}</li>`).join('')}</ul>`:'',
+  j.skippedFiles?.length?`<p class="small" style="margin:10px 0 0">Skipped: ${esc(j.skippedFiles[0].error||'not supported by the destination')}</p><ul class="file-list">${j.skippedFiles.slice(0,100).map(f=>`<li>${esc(f.dir+'/'+f.name)}</li>`).join('')}${j.skippedFiles.length>100?`<li>…and ${num(t.n('skipped')-100)} more</li>`:''}</ul>`:'',
+ ].join('');
+ return `<article class="card job${kind==='ok'?' finished':''}">
+  <div class="job-head"><div class="route">${routeHtml(j)}</div><span class="pill ${kind}">${esc(statusText(j.status))}</span></div>
+  <p class="job-meta">Transfer #${j.id} · started ${esc(new Date((j.created_at||'').replace(' ','T')+'Z').toLocaleString())}${j.active&&j.bytesPerSecond?` · ${fmtRate(j.bytesPerSecond)}`:!j.active&&j.avgBytesPerSecond?` · average ${fmtRate(j.avgBytesPerSecond)}`:''}</p>
+  <div class="progress" role="progressbar" aria-valuenow="${t.pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${t.pct}%"></span></div>
+  <div class="job-facts"><span><b>${t.pct}%</b> of ${t.totBytes?fmt(t.totBytes):num(t.totFiles)+' files'}</span>${facts}</div>
+  ${j.error?`<div class="error-box">${esc(j.error)}</div>`:''}
+  ${details?`<details class="more" data-job="${j.id}"${openDetails.has(j.id)?' open':''}><summary>Show file details</summary>${details}</details>`:''}
+  <div class="actions">${jobActions(j,t,false)}</div>
+ </article>`;
+}
+function renderHistory(force){
+ if($('view-history').hidden&&!force)return;
+ const sig=JSON.stringify(jobs.map(j=>[j.id,j.status,j.by,j.active,j.error,Math.round((j.bytesPerSecond||0)/1e4)]));
+ if(sig===historySig&&!force)return; // avoid rebuilding (and losing clicks) when nothing changed
+ historySig=sig;
+ $('historyList').innerHTML=jobs.map(jobCard).join('')||`<div class="card empty"><div class="bubble">${icon('i-history')}</div><h2>No transfers yet</h2><p>Your transfers will appear here, with what was copied, skipped or failed.</p><a class="btn primary" href="#transfer">Start a transfer</a></div>`;
+}
+document.addEventListener('toggle',e=>{const d=e.target;if(d.matches?.('details.more')){const id=Number(d.dataset.job);d.open?openDetails.add(id):openDetails.delete(id)}},true);
+
+async function refresh(){
+ try{jobs=await api('/api/jobs')}catch{return}
+ $('historyCount').textContent=jobs.length;
+ renderLive(jobs[0]);renderBanner(jobs[0]);renderHistory(false);
+}
+
+// ---------- Start ----------
 setTheme(document.documentElement.getAttribute('data-theme')||'light');
-if(themeToggle){themeToggle.onclick=()=>{const cur=document.documentElement.getAttribute('data-theme')||'light';setTheme(cur==='dark'?'light':'dark');};}
+setDirection(store.get('direction')==='to_onedrive'?'to_onedrive':'to_google');
+showView();
+status().then(browse);refresh();exiftoolStatus();loadSettings();
+setInterval(refresh,2000);setInterval(status,30000);setInterval(exiftoolStatus,60000);
 </script>
 </body>
 </html>
