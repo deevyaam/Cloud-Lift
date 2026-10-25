@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CloudLift</string>
+    <string name="no_browser">No browser found to open this link</string>
+    <string name="download_started">Downloading to your Downloads folder</string>
+</resources>

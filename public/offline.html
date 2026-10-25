@@ -22,6 +22,8 @@ button{padding:12px 22px;border:0;border-radius:10px;background:var(--primary);c
   <h1>Can't reach CloudLift</h1>
   <p>Your phone or computer is offline, or your CloudLift server isn't running. Transfers already started keep going on the server.</p>
   <button type="button" onclick="location.reload()">Try again</button>
+  <p id="changeServer" hidden style="margin:16px 0 0"><a href="#" onclick="CloudLiftApp.changeServer();return false" style="color:var(--primary);font-weight:600">Use a different server</a></p>
 </main>
+<script>if(window.CloudLiftApp)document.getElementById('changeServer').hidden=false</script>
 </body>
 </html>

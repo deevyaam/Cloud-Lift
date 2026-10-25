@@ -1,0 +1,14 @@
+.gradle/
+build/
+app/build/
+local.properties
+# Signing key and its passwords: keep them private and backed up, never commit them.
+keystore.properties
+*.jks
+*.keystore
+
+# Copies of earlier APKs
+previous-builds/
+
+# Built APKs
+dist/

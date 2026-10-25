@@ -6,7 +6,11 @@ const express = require('express');
 
 const COOKIE = 'cloudlift_session';
 // The installable-app files hold no data and are fetched by phones without the session cookie.
-const PUBLIC = /^\/(manifest\.webmanifest|sw\.js|offline\.html|icons\/[\w-]+\.png)$/;
+// The OAuth callbacks are protected by the server-signed state instead: the Android app finishes
+// sign-in in the phone's browser, which may not have a CloudLift session.
+const PUBLIC = /^\/(manifest\.webmanifest|sw\.js|offline\.html|icons\/[\w-]+\.png|auth\/(microsoft|google)\/callback)$/;
+// Only same-site paths are allowed as the place to continue to after signing in.
+const safeNext = (next) => (typeof next === 'string' && /^\/(?![/\\])/.test(next) ? next : '/');
 const SESSION_DAYS = 30;
 const enabled = () => !!process.env.APP_PASSWORD;
 const key = () => process.env.TOKEN_KEY || 'cloudlift-session-key';
@@ -43,7 +47,7 @@ function recordFailure(ip) {
   failures.set(ip, { count: fresh ? 1 : f.count + 1, until: Date.now() + 15 * 60000 });
 }
 
-const page = (message) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · CloudLift</title>
+const page = (message, next = '/') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · CloudLift</title>
 <link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png"><link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"><meta name="theme-color" content="#5458ee">
 <style>
 :root{color-scheme:light dark;--bg:#f5f6fa;--card:#fff;--ink:#171c2a;--muted:#76809a;--line:#e3e6ee;--primary:#5458ee;--bad:#d42146}
@@ -56,35 +60,39 @@ input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10
 input:focus{outline:0;border-color:var(--primary);box-shadow:0 0 0 4px color-mix(in srgb,var(--primary) 20%,transparent)}
 button{width:100%;margin-top:12px;padding:12px;border:0;border-radius:10px;background:var(--primary);color:#fff;font:inherit;font-weight:700;cursor:pointer}
 .err{color:var(--bad);margin:10px 0 0;font-weight:600}
-</style></head><body><form method="post" action="/login"><img class="mark" src="/icons/icon-192.png" alt=""><h1>CloudLift</h1><p>Enter the password for this copy of CloudLift.</p>
+</style></head><body><form method="post" action="/login"><input type="hidden" name="next" value="${next.replace(/[&"<>]/g, (c) => `&#${c.charCodeAt(0)};`)}"><img class="mark" src="/icons/icon-192.png" alt=""><h1>CloudLift</h1><p>Enter the password for this copy of CloudLift.</p>
 <input type="password" name="password" autocomplete="current-password" aria-label="Password" placeholder="Password" required autofocus>
 <button type="submit">Sign in</button>${message ? `<p class="err">${message}</p>` : ''}</form></body></html>`;
 
 function install(app) {
   if (!enabled()) return;
-  app.get('/login', (req, res) => (validSession(req) ? res.redirect('/') : res.send(page(''))));
+  app.get('/login', (req, res) => {
+    const next = safeNext(req.query.next);
+    return validSession(req) ? res.redirect(next) : res.send(page('', next));
+  });
   app.post('/login', express.urlencoded({ extended: false }), (req, res) => {
     const ip = req.ip;
-    if (blocked(ip)) return res.status(429).send(page('Too many wrong attempts. Try again in 15 minutes.'));
+    const next = safeNext(req.body?.next);
+    if (blocked(ip)) return res.status(429).send(page('Too many wrong attempts. Try again in 15 minutes.', next));
     const ok = crypto.timingSafeEqual(digest(req.body?.password ?? ''), digest(process.env.APP_PASSWORD));
     if (!ok) {
       recordFailure(ip);
-      return res.status(401).send(page('Wrong password.'));
+      return res.status(401).send(page('Wrong password.', next));
     }
     failures.delete(ip);
     setSession(req, res);
-    res.redirect('/');
+    res.redirect(next);
   });
   app.post('/logout', (req, res) => {
     res.clearCookie(COOKIE, { path: '/' });
     res.json({ ok: true });
   });
-  // Everything else, including the OAuth callbacks, needs a signed-in session.
+  // Everything else needs a signed-in session; after signing in, page requests continue where they were going.
   app.use((req, res, next) => {
     if (validSession(req) || PUBLIC.test(req.path)) return next();
     if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Signed out. Reload the page to sign in again.' });
-    res.redirect('/login');
+    res.redirect(req.method === 'GET' && req.originalUrl !== '/' ? `/login?next=${encodeURIComponent(req.originalUrl)}` : '/login');
   });
 }
 
-module.exports = { install, enabled };
+module.exports = { install, enabled, validSession };

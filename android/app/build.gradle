@@ -1,0 +1,49 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Release signing comes from keystore.properties (not committed). Without it, only debug builds are signed.
+def keystoreFile = rootProject.file('keystore.properties')
+def keystore = new Properties()
+if (keystoreFile.exists()) keystoreFile.withInputStream { keystore.load(it) }
+
+android {
+    namespace 'app.cloudlift'
+    compileSdk 34
+
+    defaultConfig {
+        // Must stay app.cloudlift and be signed with the same key so installs update in place.
+        applicationId 'app.cloudlift'
+        minSdk 29
+        targetSdk 34
+        versionCode 2
+        versionName '1.1'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        release {
+            if (keystoreFile.exists()) {
+                storeFile rootProject.file(keystore['storeFile'])
+                storePassword keystore['storePassword']
+                keyAlias keystore['keyAlias']
+                keyPassword keystore['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig keystoreFile.exists() ? signingConfigs.release : null
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

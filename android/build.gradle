@@ -1,0 +1,12 @@
+plugins {
+    id 'com.android.application' version '8.7.3' apply false
+}
+
+// On Windows, build outside the project folder: it may be synced by OneDrive, which locks files
+// that Gradle needs to rewrite. Elsewhere the normal build/ folders are used.
+def localAppData = System.getenv('LOCALAPPDATA')
+if (localAppData) {
+    subprojects {
+        layout.buildDirectory = new File(localAppData, "CloudLift/android-build/${project.name}")
+    }
+}

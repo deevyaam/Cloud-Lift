@@ -110,6 +110,25 @@ CloudLift is an installable web app, so a server copy can be added to a phone's 
 
 Installing needs HTTPS, which the Caddy setup above provides. A copy on your own computer can also be installed there from Chrome or Edge, but a phone can't reach a copy that only runs at `localhost`.
 
+### Android app (APK)
+The `android/` folder builds **CloudLift for Android** (`app.cloudlift`), a small app that opens your CloudLift server full screen. As with the installable web app, the server does the transfers.
+
+- **Install:** copy `CloudLift-1.1.apk` to the phone and open it. Android asks to allow installing from that source (for example *Files* or *Chrome*); allow it once.
+- **Connect:** on first launch, enter your server address (for example `https://cloudlift.example.com`) and sign in with `APP_PASSWORD`.
+- **Signing in to Microsoft and Google** opens in the phone's browser, because Google doesn't allow its sign-in inside apps. The browser may ask for `APP_PASSWORD` once. When it shows "connected", tap **Return to CloudLift**. Choosing photos in Google Photos works the same way.
+- To use a different server later: **Settings → Change server**.
+
+Building it yourself (needs Android Studio, which provides the Android SDK and Java):
+
+```bash
+cd android
+./gradlew assembleRelease
+```
+
+On Windows the build goes to `%LOCALAPPDATA%\CloudLift\android-build` (outside OneDrive, which locks build files). The signed APK is `app\outputs\apk\release\app-release.apk` there.
+
+Release builds are signed with the key described in `android/keystore.properties` (not in git). **Back up `cloudlift-release.jks` and `keystore.properties` somewhere safe.** Android only installs updates signed with the same key, so if the key is lost, everyone has to uninstall CloudLift and install the new version fresh. Raise `versionCode` in `android/app/build.gradle` for every new release.
+
 ### Security notes
 - CloudLift **refuses to start on a public address without `APP_PASSWORD`**, because anyone reaching it could use your connected accounts. Use a long, unique password; after 5 wrong attempts an address must wait 15 minutes.
 - Keep `.env` private: it holds your app secrets, `TOKEN_KEY` and the password.

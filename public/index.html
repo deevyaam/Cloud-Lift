@@ -297,6 +297,9 @@ dialog.confirm .actions{justify-content:flex-end}
   .step-head{padding:16px}
   .step-body{padding:0 16px 20px}
   .choice-grid{grid-template-columns:1fr}
+  .account{flex-wrap:wrap}
+  .account-text{flex-basis:calc(100% - 42px)}
+  .account .actions{width:100%;justify-content:flex-end}
   .filter{width:100%}
   .job{padding:16px}
 }
@@ -516,6 +519,11 @@ dialog.confirm .actions{justify-content:flex-end}
       <div class="field"><label for="setConcurrency">Files transferred at once</label><input class="input" id="setConcurrency" type="number" min="1" max="16" step="1" required><small>More is faster on a good connection. 1–16.</small></div>
       <div class="field"><label for="setSpeed">Speed limit (MB/s)</label><input class="input" id="setSpeed" type="number" min="0" max="1000" step="0.5" required><small>0 means no limit. Changes apply to running transfers too.</small></div>
       <button class="btn primary" type="submit">Save settings</button>
+      <div class="field" id="appServer" hidden style="margin-top:28px;padding-top:20px;border-top:1px solid var(--line)">
+        <label>CloudLift server</label>
+        <small id="appServerUrl"></small>
+        <div><button class="btn" type="button" id="changeServer">Change server</button></div>
+      </div>
     </form>
     <div class="help" id="helpContent">
       <h3>How it works</h3>
@@ -563,6 +571,9 @@ let stack=[{id:'root',name:'OneDrive'}], selected=null, folderItems=[], foldersL
 let gStack=[{id:'root',name:'My Drive'}], srcSel={gphotos:null,gdrive:null,takeout:null}, pickToken=0;
 let accounts={}, jobs=[], openStep=null, historySig='', openDetails=new Set(), spark={job:null,values:[]};
 const reverse=()=>dir==='to_onedrive';
+// Inside the Android app, the native shell provides window.CloudLiftApp. Google blocks sign-in inside
+// embedded browsers, so sign-ins and the Photos picker open in the phone's browser instead.
+const app=window.CloudLiftApp||null;
 
 // ---------- Helpers ----------
 const num=n=>Number(n||0).toLocaleString();
@@ -673,6 +684,16 @@ async function status(){
  $('accountList').innerHTML=accountRow('microsoft',accounts.microsoftAccount,accounts.microsoftConfigured)+accountRow('google',accounts.googleAccount,accounts.googleConfigured);
  renderSteps();
 }
+// In the app, sign-in links open in the phone's browser; the server then offers a button back to the app.
+document.addEventListener('click',e=>{
+ const a=app&&e.target.closest('a[href^="/auth/"]');
+ if(!a)return;
+ e.preventDefault();
+ app.openExternal(location.origin+a.getAttribute('href')+'?app=1');
+ toast('Finish signing in in your browser, then come back');
+});
+// Coming back to the page (for example from the browser after signing in): refresh right away.
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){status();refresh()}});
 document.addEventListener('click',async e=>{
  const btn=e.target.closest('[data-disconnect]');
  if(!btn)return;
@@ -728,11 +749,12 @@ const sourceChoice=()=>source==='gphotos'?(srcSel.gphotos?.count?srcSel.gphotos:
 
 $('pickPhotos').onclick=async()=>{
  const token=++pickToken;
- const win=window.open('about:blank','gphotos-picker','width=1100,height=800'); // opened now so popup blockers allow it
+ const win=app?null:window.open('about:blank','gphotos-picker','width=1100,height=800'); // opened now so popup blockers allow it
  srcSel.gphotos=null;renderSteps();
  try{
   const s=await post('/api/picker/sessions');
-  if(win){win.location=s.pickerUri;$('pickStatus').textContent='Waiting for you to press Done in the Google Photos window…'}
+  if(app){app.openExternal(s.pickerUri);$('pickStatus').textContent='Pick your items in Google Photos, press Done, then come back to CloudLift.'}
+  else if(win){win.location=s.pickerUri;$('pickStatus').textContent='Waiting for you to press Done in the Google Photos window…'}
   else $('pickStatus').innerHTML=`Your browser blocked the Google Photos window. <a href="${esc(s.pickerUri)}" target="_blank" rel="noopener">Open Google Photos</a>, pick your items and press Done.`;
   const until=Date.now()+30*60*1000;
   while(Date.now()<until&&token===pickToken){
@@ -968,11 +990,17 @@ async function refresh(){
  renderLive(jobs[0]);renderBanner(jobs[0]);renderHistory(false);
 }
 
+// ---------- Android app ----------
+if(app){
+ $('appServer').hidden=false;$('appServerUrl').textContent=location.origin;
+ $('changeServer').onclick=()=>app.changeServer();
+}
+
 // ---------- Installable app ----------
 // The service worker only shows an offline page; it never caches transfers or sign-ins.
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 let installPrompt=null;
-addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('installBtn').hidden=false});
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('installBtn').hidden=!!app});
 $('installBtn').onclick=async()=>{
  if(!installPrompt)return;
  installPrompt.prompt();

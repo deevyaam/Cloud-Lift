@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand">#5458EE</color>
+    <color name="page_light">#F5F6FA</color>
+    <color name="page_dark">#0D1017</color>
+
+    <style name="CloudLift" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/page_light</item>
+        <item name="android:statusBarColor">@color/brand</item>
+        <item name="android:navigationBarColor">@color/brand</item>
+        <item name="android:colorPrimary">@color/brand</item>
+        <item name="android:colorAccent">@color/brand</item>
+    </style>
+</resources>

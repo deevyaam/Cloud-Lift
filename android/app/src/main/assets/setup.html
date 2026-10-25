@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Connect to CloudLift</title>
+<style>
+:root{color-scheme:light dark;--bg:#f5f6fa;--card:#fff;--ink:#171c2a;--muted:#5d667c;--line:#e3e6ee;--primary:#5458ee;--bad:#d42146;--warn:#a85d00;--warn-soft:#fdf2df}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1017;--card:#161a24;--ink:#eceff5;--muted:#a3abbd;--line:#293043;--primary:#8487ff;--bad:#fb7185;--warn:#fbbf24;--warn-soft:#2d2411}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px 16px;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{width:100%;max-width:420px}
+.logo{width:72px;height:72px;border-radius:18px;display:block;margin:0 auto 16px}
+h1{font-size:24px;margin:0;text-align:center;letter-spacing:-.02em}
+.lead{color:var(--muted);text-align:center;margin:8px 0 24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+label{display:block;font-weight:600;margin-bottom:6px}
+input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:transparent;color:inherit;font:inherit}
+input:focus{outline:0;border-color:var(--primary);box-shadow:0 0 0 4px color-mix(in srgb,var(--primary) 20%,transparent)}
+button{width:100%;margin-top:14px;padding:14px;border:0;border-radius:12px;background:var(--primary);color:#fff;font:inherit;font-weight:700}
+button:disabled{opacity:.6}
+.msg{margin:12px 0 0;font-weight:600;color:var(--bad)}
+.hint{color:var(--muted);font-size:14px;margin:12px 0 0}
+.banner{background:var(--warn-soft);color:var(--ink);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:15px}
+.banner b{color:var(--warn)}
+.help{color:var(--muted);font-size:14px;margin-top:20px;text-align:center}
+.help a{color:var(--primary);font-weight:600}
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="icon.png" alt="">
+  <h1>Connect to CloudLift</h1>
+  <p class="lead">Enter the address of your own CloudLift server. Transfers run there, so they keep going when your phone is locked.</p>
+  <div class="banner" id="unreachable" hidden><b>Couldn't reach your server.</b> Check your connection, or that the server is running, then try again.</div>
+  <form class="card" id="form">
+    <label for="server">Server address</label>
+    <input id="server" type="url" inputmode="url" autocomplete="url" autocapitalize="off" spellcheck="false" placeholder="https://cloudlift.example.com" required>
+    <button id="go" type="submit">Connect</button>
+    <p class="msg" id="msg" hidden></p>
+    <p class="hint" id="httpHint" hidden>Use <b>http://</b> only for a server on your own home network. Anywhere else, use <b>https://</b> so your password stays private.</p>
+  </form>
+  <p class="help">Don't have a server yet? See <a href="https://github.com/deevyaam/Cloud-Lift/blob/main/DEPLOY.md">how to set one up</a>.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const bridge=window.CloudLiftApp;
+const saved=bridge?bridge.getServer():'';
+if(saved)$('server').value=saved;
+if(location.hash==='#unreachable'&&saved)$('unreachable').hidden=false;
+$('server').oninput=()=>{$('msg').hidden=true;$('httpHint').hidden=!/^http:\/\//i.test($('server').value.trim())};
+$('form').onsubmit=e=>{
+ e.preventDefault();
+ $('go').disabled=true;$('go').textContent='Checking…';$('msg').hidden=true;
+ bridge.connect($('server').value);
+};
+// Called by the app when the address can't be used.
+window.onServerResult=(ok,message)=>{
+ $('go').disabled=false;$('go').textContent='Connect';
+ if(!ok){$('msg').textContent=message;$('msg').hidden=false}
+};
+</script>
+</body>
+</html>

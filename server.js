@@ -29,8 +29,9 @@ app.use(express.json());
 app.use(express.static('public'));
 const states = new Set();
 
-function oauthState() {
-  const value = `${Date.now()}.${crypto.randomUUID()}`;
+// fromApp marks sign-ins started from the Android app, which finish in the phone's browser.
+function oauthState(fromApp = false) {
+  const value = `${Date.now()}.${crypto.randomUUID()}.${fromApp ? 'app' : 'web'}`;
   const key = process.env.TOKEN_KEY || 'temporary-oauth-state-key';
   const signature = crypto.createHmac('sha256', key).update(value).digest('base64url');
   return `${Buffer.from(value).toString('base64url')}.${signature}`;
@@ -49,6 +50,16 @@ function validOAuthState(value) {
   return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 }
 
+const stateFromApp = (value) => Buffer.from(String(value).split('.')[0], 'base64url').toString().split('.')[2] === 'app';
+
+// Shown in the phone's browser after a sign-in started from the Android app.
+const returnToApp = (label) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${label} connected · CloudLift</title>
+<style>:root{color-scheme:light dark}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:16px;font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;background:#f5f6fa;color:#171c2a}
+@media (prefers-color-scheme:dark){body{background:#0d1017;color:#eceff5}}main{max-width:380px;text-align:center}img{width:72px;height:72px;border-radius:18px}h1{font-size:22px;margin:16px 0 6px}p{opacity:.8;margin:0 0 20px}
+a{display:inline-block;padding:13px 22px;border-radius:12px;background:#5458ee;color:#fff;font-weight:700;text-decoration:none}</style></head>
+<body><main><img src="/icons/icon-192.png" alt=""><h1>${label} connected</h1><p>You can go back to the CloudLift app now.</p>
+<a href="intent://return#Intent;scheme=cloudlift;package=app.cloudlift;end">Return to CloudLift</a></main></body></html>`;
+
 function htmlText(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 }
@@ -56,7 +67,7 @@ function htmlText(value) {
 function login(provider) {
   const label = provider.name === 'microsoft' ? 'Microsoft' : 'Google';
   app.get(`/auth/${provider.name}`, (req, res) => {
-    const s = oauthState();
+    const s = oauthState(req.query.app === '1');
     states.add(s);
     try {
       res.redirect(provider.mod.authUrl(s));
@@ -83,6 +94,7 @@ function login(provider) {
       await provider.mod.exchange(req.query.code);
       console.log(`[oauth:${provider.name}] connected`);
       worker.resumeAuthPaused();
+      if (stateFromApp(req.query.state)) return res.send(returnToApp(label));
       res.redirect('/');
     } catch (e) {
       const message = describeError(e);
